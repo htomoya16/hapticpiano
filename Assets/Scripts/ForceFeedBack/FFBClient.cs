@@ -1,54 +1,58 @@
 using UnityEngine;
-using Valve.VR;
 using Valve.VR.InteractionSystem;
 
-// 各 Interactable（つかめる／触れるオブジェクト）にアタッチされる Force Feedback クライアント。
-// 手がオブジェクトに「ホバー」したタイミングで、FFBManager に指の情報を渡す役割を担う。
+// 各 Interactable にアタッチされ、ホバー開始/終了をトリガーに FFB を送るクライアントである。
 public class FFBClient : MonoBehaviour
 {
-    // シーン内に1つだけ存在する Force Feedback 管理クラス
     private FFBManager _ffbManager;
 
     private void Awake()
     {
-        // シーン内から FFBManager を探して保持しておく
-        _ffbManager = GameObject.FindObjectOfType<FFBManager>();
+        _ffbManager = FindObjectOfType<FFBManager>();
+
+        if (_ffbManager == null)
+        {
+            Debug.LogError("[FFBClient] シーン内に FFBManager が見つからない。");
+        }
     }
 
-    // 手がこのオブジェクトの上にホバーし始めたときに呼ばれるコールバック
-    // （SteamVR InteractionSystem のイベント）
+    // 手がこのオブジェクト上にホバーし始めたとき
     private void OnHandHoverBegin(Hand hand)
     {
-        Debug.Log("Received Hand hover event");
-
-        // このオブジェクトに設定されている SkeletonPose から、
-        // 左右どちらの手で触っているかに応じて対応する Hand のポーズを取得する
-        SteamVR_Skeleton_Pose_Hand skeletonPoseHand;
-
-        if (hand.handType == SteamVR_Input_Sources.LeftHand)
+        if (_ffbManager == null)
         {
-            // 左手でホバーしている場合：左手用ポーズを取得
-            skeletonPoseHand = GetComponent<Interactable>().skeletonPoser.skeletonMainPose.leftHand;
-        }
-        else
-        {
-            // 右手でホバーしている場合：右手用ポーズを取得
-            skeletonPoseHand = GetComponent<Interactable>().skeletonPoser.skeletonMainPose.rightHand;
+            return;
         }
 
-        // 取得した Skeleton 情報を FFBManager に渡し、
-        // 指の曲がり具合から Force Feedback を計算・送信してもらう
-        _ffbManager.SetForceFeedbackFromSkeleton(hand, skeletonPoseHand);
+        Debug.Log("[FFBClient] Hand hover begin.");
+
+        // 手の GameObject から HandCurlTracker を取得
+        var curlTracker = hand.GetComponent<HandCurlTracker>();
+        if (curlTracker == null)
+        {
+            Debug.LogWarning("[FFBClient] HandCurlTracker が Hand に見つからない。Force Feedback は送信しない。");
+            return;
+        }
+
+        // 現在の curl から FFB 入力を構築
+        VRFFBInput input = curlTracker.GetCurrentFfbInput();
+
+        // curl 値をそのまま FFBManager に渡して送信
+        _ffbManager.SetForceFeedbackByCurl(hand, input);
     }
 
-    // 手がこのオブジェクトからホバーをやめたときに呼ばれるコールバック
+    // 手がこのオブジェクトからホバーをやめたとき
     private void OnHandHoverEnd(Hand hand)
     {
-        // もし現在この手で何かオブジェクトを「掴んでいる」なら、
-        // Force Feedback はその掴み側で制御されるべきなので、ここでは何もしない。
+        if (_ffbManager == null)
+        {
+            return;
+        }
+
+        // 何か掴んでいる場合は掴み側のロジックに任せる
         if (!hand.currentAttachedObject)
         {
-            // 何も掴んでいない場合は、指の力を抜く（FFB を 0 にする）
+            // 何も掴んでいないなら力を抜く
             _ffbManager.RelaxForceFeedback(hand);
         }
     }
