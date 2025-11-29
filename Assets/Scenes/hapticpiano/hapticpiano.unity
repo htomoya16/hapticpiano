@@ -8491,6 +8491,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1686190267}
     m_Modifications:
+    - target: {fileID: 1885876815374969673, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
+      propertyPath: gain
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1885876815374969673, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
+      propertyPath: deadZone
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4028037105033303688, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
       propertyPath: m_Camera
       value: 
@@ -8511,6 +8519,14 @@ PrefabInstance:
       propertyPath: handPrefab
       value: 
       objectReference: {fileID: 1354185198}
+    - target: {fileID: 8720666323052510609, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
+      propertyPath: controllerPrefab
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 8720666323052510609, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
+      propertyPath: displayHandByDefault
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 8830372452643347967, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.25
@@ -8549,6 +8565,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8830372452643347967, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8832416419056479202, guid: 29c6187a776067946b8126ab1a94fd52, type: 3}
+      propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
@@ -33820,6 +33840,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1686190267}
     m_Modifications:
+    - target: {fileID: 1594893996418382267, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: gain
+      value: 0.7
+      objectReference: {fileID: 0}
+    - target: {fileID: 1594893996418382267, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: deadZone
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 2046445255850138654, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
       propertyPath: m_Name
       value: RightHand
@@ -33828,6 +33856,26 @@ PrefabInstance:
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 1687686149}
+    - target: {fileID: 2893632663276202418, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3008035618180272406, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3008035618180272406, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: controllerPrefab
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 3008035618180272406, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: displayHandByDefault
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3008035618180272406, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: displayControllerByDefault
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3275369727746654517, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
       propertyPath: otherHand
       value: 
@@ -33872,10 +33920,22 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6498824480225754517, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: overridePreviewLeftHandPrefab
+      value: 
+      objectReference: {fileID: 1000013348574242, guid: 638779290bce1af49b356f33dcc6fccf, type: 3}
+    - target: {fileID: 6498824480225754517, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: overridePreviewRightHandPrefab
+      value: 
+      objectReference: {fileID: 1000010304998954, guid: 6def53d002137b747aec0b29551e0e25, type: 3}
     - target: {fileID: 6577142819098297719, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
       propertyPath: cameraTransform
       value: 
       objectReference: {fileID: 1686126351}
+    - target: {fileID: 6604240265715004587, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
