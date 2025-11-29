@@ -7,7 +7,7 @@ public class HandCurlTracker : MonoBehaviour
 {
     [Header("References")]
     public Hand hand;                                  // 左右どちらの手か
-    public SteamVR_Behaviour_Skeleton skeleton;        // 対応する Skeleton
+    private SteamVR_Behaviour_Skeleton skeleton;        // 対応する Skeleton
 
     [Header("Tuning")]
     [Tooltip("これ未満の小さな曲がりは 0 とみなす")]
@@ -26,14 +26,17 @@ public class HandCurlTracker : MonoBehaviour
 
     private void Awake()
     {
+        // Hand 参照を確保
         if (hand == null)
         {
             hand = GetComponent<Hand>();
         }
 
-        if (skeleton == null)
+        // Hand が持っている skeleton を使う
+        if (skeleton == null && hand != null && hand.skeleton != null)
         {
-            skeleton = GetComponent<SteamVR_Behaviour_Skeleton>();
+            skeleton = hand.skeleton;
+            // Debug.Log($"[HandCurlTracker] Hand.skeleton から Skeleton を取得: {skeleton.name}");
         }
 
         if (hand == null)
@@ -43,7 +46,7 @@ public class HandCurlTracker : MonoBehaviour
 
         if (skeleton == null)
         {
-            Debug.LogWarning("[HandCurlTracker] SteamVR_Behaviour_Skeleton がアタッチされていない。");
+            Debug.LogWarning("[HandCurlTracker] SteamVR_Behaviour_Skeleton が見つからない。curl は更新されない。");
         }
     }
 
@@ -51,7 +54,17 @@ public class HandCurlTracker : MonoBehaviour
     {
         if (skeleton == null || skeleton.skeletonAction == null)
         {
-            return;
+            var fromHand = hand.skeleton; // ← さっきのプロパティ
+            if (fromHand != null)
+            {
+                skeleton = fromHand;
+                // Debug.Log($"[HandCurlTracker] Hand.skeleton から Skeleton を取得: {skeleton.name}");
+            }
+            if (skeleton == null)
+            {
+                // まだ null ならこのフレームは何もしない
+                return;
+            }
         }
 
         // SteamVR_Behaviour_Skeleton から fingerCurls（0〜1）を毎フレーム取得

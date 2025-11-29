@@ -17,20 +17,16 @@ using Valve.VR.InteractionSystem;
 // ・左右それぞれの Named Pipe に値を送る
 public class FFBManager : MonoBehaviour
 {
-    // シーン内に存在する Interactable の一覧
+    // シーン内に存在する Interactable(Hand が Hover（接触）／Grab（掴み）などの操作をできる対象) の一覧
     private Interactable[] _interactables;
 
     // 左手／右手それぞれの Force Feedback プロバイダ
     private FFBProvider _ffbProviderLeft;
     private FFBProvider _ffbProviderRight;
 
-    // デバッグ用: 最後に計算した指 curl 値 (0〜1000) を保存
-    // [0]=親指, [1]=人差し指, ... [4]=小指
-    [SerializeField] public short[] lastLeftFingerCurl  = new short[5];
-    [SerializeField] public short[] lastRightFingerCurl = new short[5];
 
     // true の場合、Awake 時に全 Interactable に FFBClient コンポーネントを自動付与する
-    public bool injectFfbProvider = true;
+    public bool injectFfbProvider = false;
 
     private void Awake()
     {
@@ -38,6 +34,8 @@ public class FFBManager : MonoBehaviour
         _ffbProviderLeft = new FFBProvider(ETrackedControllerRole.LeftHand);
         _ffbProviderRight = new FFBProvider(ETrackedControllerRole.RightHand);
 
+
+        // 全 Interactable に FFBClient コンポーネントを自動付与
         if (injectFfbProvider)
         {
             // シーン内の全 Interactable を検索

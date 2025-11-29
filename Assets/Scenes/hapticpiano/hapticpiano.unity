@@ -380,7 +380,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: New Text
+  m_Text: Right Hand Curl
 --- !u!222 &141660408
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -680,7 +680,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: New Text
+  m_Text: Left Hand Curl
 --- !u!222 &419442286
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1166,7 +1166,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hand: {fileID: 847452406}
-  skeleton: {fileID: 1729384415}
+  skeleton: {fileID: 0}
   deadZone: 0.05
   gain: 1.4
   curl01:
@@ -1382,7 +1382,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hand: {fileID: 1135058206}
-  skeleton: {fileID: 2111973358}
+  skeleton: {fileID: 0}
   deadZone: 0.05
   gain: 1.4
   curl01:
@@ -1536,8 +1536,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee029e0fea052324e806a39090ca9862, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  lastLeftFingerCurl: 00000000000000000000
-  lastRightFingerCurl: 00000000000000000000
   injectFfbProvider: 1
 --- !u!4 &1509051973
 Transform:
@@ -1772,10 +1770,10 @@ PrefabInstance:
       addedObject: {fileID: 1729384414}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 144230, guid: dc06161b6d97feb419f45f03b62e14b9, type: 3}
-      insertIndex: -1
+      insertIndex: 3
       addedObject: {fileID: 1135058207}
     - targetCorrespondingSourceObject: {fileID: 160596, guid: dc06161b6d97feb419f45f03b62e14b9, type: 3}
-      insertIndex: -1
+      insertIndex: 3
       addedObject: {fileID: 847452407}
   m_SourcePrefab: {fileID: 100100000, guid: dc06161b6d97feb419f45f03b62e14b9, type: 3}
 --- !u!4 &1729384414 stripped
@@ -1783,17 +1781,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4000012125075130, guid: 6def53d002137b747aec0b29551e0e25, type: 3}
   m_PrefabInstance: {fileID: 773879157}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1729384415 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 114000012051789102, guid: 6def53d002137b747aec0b29551e0e25, type: 3}
-  m_PrefabInstance: {fileID: 773879157}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 00f6c0d7b5a00aa4a8d38a09a0480032, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1001 &1803129498
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2052,17 +2039,6 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 4000013303659494, guid: 638779290bce1af49b356f33dcc6fccf, type: 3}
   m_PrefabInstance: {fileID: 1803129498}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &2111973358 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 114000013038800862, guid: 638779290bce1af49b356f33dcc6fccf, type: 3}
-  m_PrefabInstance: {fileID: 1803129498}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 00f6c0d7b5a00aa4a8d38a09a0480032, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!33 &20577762263969977
 MeshFilter:
   m_ObjectHideFlags: 0
