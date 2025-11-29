@@ -9,6 +9,9 @@ public class HandCurlTracker : MonoBehaviour
     public Hand hand;                                  // 左右どちらの手か
     private SteamVR_Behaviour_Skeleton skeleton;        // 対応する Skeleton
 
+    // この HandCurlTracker に紐づいている SteamVR_Behaviour_Skeleton への公開用プロパティ
+    public SteamVR_Behaviour_Skeleton Skeleton => skeleton;
+
     [Header("Tuning")]
     [Tooltip("これ未満の小さな曲がりは 0 とみなす")]
     [Range(0f, 0.3f)]

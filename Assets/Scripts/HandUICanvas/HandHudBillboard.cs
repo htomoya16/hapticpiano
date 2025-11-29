@@ -1,5 +1,6 @@
 using UnityEngine;
 
+// HMDに対して垂直水平に表示するビルボード
 public class HandHudBillboard_HmdAligned : MonoBehaviour
 {
     [Header("HMD カメラ (VR Camera)")]

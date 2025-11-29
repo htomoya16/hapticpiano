@@ -12,7 +12,6 @@ using Valve.VR;
 using Valve.VR.InteractionSystem;
 
 // Force Feedback 全体を管理するクラス。
-// ・シーン内の Interactable に FFBClient をばらまく
 // ・指の曲がり具合から FFB 用の値（0〜1000）を計算する
 // ・左右それぞれの Named Pipe に値を送る
 public class FFBManager : MonoBehaviour
@@ -25,7 +24,7 @@ public class FFBManager : MonoBehaviour
     private FFBProvider _ffbProviderRight;
 
 
-    // true の場合、Awake 時に全 Interactable に FFBClient コンポーネントを自動付与する
+    // true → Awake 時に全 Interactable に FFBClient コンポーネントを自動付与
     public bool injectFfbProvider = false;
 
     private void Awake()

@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+// HandCurlTracker のデバッグ用 UI パネル
 public class CurlDebugUI : MonoBehaviour
 {
     [Header("Target")]
