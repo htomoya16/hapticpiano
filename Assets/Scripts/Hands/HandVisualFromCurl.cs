@@ -3,7 +3,7 @@ using UnityEngine;
 public class HandVisualFromCurl : MonoBehaviour
 {
     [Header("Source")]
-    public HandCurlTracker curlSource;  // LeftHand に付いている HandCurlTracker
+    public HandCurlTracker curlSource;  // Left/Right Hand に付いている HandCurlTracker
 
     [Header("Finger Joints (base bone per finger)")]
     public Transform thumbJoint;
@@ -39,8 +39,19 @@ public class HandVisualFromCurl : MonoBehaviour
 
     void LateUpdate()
     {
-        if (curlSource == null || curlSource.curl01 == null) return;
+        if (curlSource == null || curlSource.curl01 == null)
+        {
+            Debug.LogWarning("[HandVisualFromCurl] curlSource is null");
+            return;
+        }
 
+        if (curlSource.curl01 == null || curlSource.curl01.Length < 5)
+        {
+            Debug.LogWarning("[HandVisualFromCurl] curl01 invalid");
+            return;
+        }
+
+        //Debug.Log($"VisualHand curl index={curlSource.curl01[1]}");
         ApplyFinger(thumbJoint,  0, curlSource.curl01[0], thumbMaxAngle);
         ApplyFinger(indexJoint,  1, curlSource.curl01[1], indexMaxAngle);
         ApplyFinger(middleJoint, 2, curlSource.curl01[2], middleMaxAngle);
@@ -66,6 +77,6 @@ public class HandVisualFromCurl : MonoBehaviour
         float angle = maxAngle * x;
 
         // モデルによって X/Y/Z が違う可能性があるので、必要なら軸は変える
-        joint.localRotation = baseRot[idx] * Quaternion.Euler(angle, 0f, 0f);
+        joint.localRotation = baseRot[idx] * Quaternion.Euler(0f, 0f, -angle);
     }
 }
