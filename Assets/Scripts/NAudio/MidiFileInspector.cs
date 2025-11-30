@@ -71,6 +71,7 @@ public class MidiFileInspector
 							}
 							catch (Exception e)
 							{
+								Debug.LogWarning($"Tempo lookup failed: {e.Message}");
 								noteOn.Tempo = MidiFile.DeltaTicksPerQuarterNote * defaultTempo / 60;
 							}
 						}
