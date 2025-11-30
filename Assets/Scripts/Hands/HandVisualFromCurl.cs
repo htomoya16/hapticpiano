@@ -27,10 +27,6 @@ public class HandVisualFromCurl : MonoBehaviour
     public Transform[] ringJoints;
     public Transform[] pinkyJoints;
 
-    [Header("Finger Tips (Collider Anchor Prep)")]
-    [Tooltip("指先アンカー（親指〜小指）。Collider 追加時に利用する想定。")]
-    public Transform[] fingertipAnchors = new Transform[5];
-
     [Header("Max curl angle (deg)")]
     public float thumbMaxAngle  = 45f;
     public float indexMaxAngle  = 70f;
