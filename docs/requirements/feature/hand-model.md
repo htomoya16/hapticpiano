@@ -19,8 +19,7 @@
 ## 2. 目的
 
 - XR 空間で現実の手の開閉を自然に再現する  
-- 将来ピアノ鍵盤の当たり判定・押し込み量・FFB に連動できる構造を作る  
-- SteamVR HandPhysics/HandCollider ではなく **見た目手にコライダを直付け** して扱う方針
+- 将来ピアノ鍵盤の当たり判定・押し込み量・FFB に連動できる構造を作る（コライダ詳細は別 story にて扱う）
 
 ---
 
@@ -41,8 +40,7 @@
 
 ### (4) Transform 構造の一貫性
 - 指の階層（MCP → PIP → DIP → TIP）が Unity 上で統一されている  
-- **見た目手のボーンに直接 Collider を付ける** 前提で、各指1〜3本のカプセルを TIP から根元方向へ配置できる構造にする  
-- HandPhysics / HandCollider（別プレハブ）に依存しない
+- 将来のコライダ追加に耐えられるよう、ボーン配列が整理されている（実装詳細は hand-model-collider story で扱う）
 
 ### (5) デバッグ容易性
 - curl 値・回転角を確認できる UI（ログ / Gizmo / Text）のいずれかを  
@@ -56,7 +54,7 @@
 
 ## 4. 将来拡張
 
-- 指先 Collider 追加（直付け済み前提で押し込み量計算へ拡張）  
+- 指先 Collider 追加（別 story で管理）  
 - ピアノ鍵盤との押し込み量計算  
 - 押し込み量 → FFB 連動  
 - 非線形カーブ調整（ガンマ・重み付け）  
@@ -66,3 +64,4 @@
 
 ## 5. 関連 story
 - story/hand-model-basic.md  
+- story/hand-model-improvements.md

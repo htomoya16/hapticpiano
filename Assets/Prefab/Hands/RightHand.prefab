@@ -140,6 +140,8 @@ MonoBehaviour:
   hand: {fileID: 3275369727746654517}
   deadZone: 0
   gain: 0.7
+  smoothingEnabled: 1
+  smoothingFactor: 0.25
   curl01:
   - 0
   - 0
@@ -147,6 +149,9 @@ MonoBehaviour:
   - 0
   - 0
   curlFfb: 00000000000000000000
+  preset: {fileID: 11400000, guid: 31debb92f8cac684cbafecd2f51143cd, type: 2}
+  applyPresetOnAwake: 1
+  zeroWhenUntracked: 1
 --- !u!114 &9013444869388367677
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1481,6 +1486,9 @@ MonoBehaviour:
   pinkyMaxAngle: 90
   deadZone: 0.011
   gamma: 1.2
+  preset: {fileID: 11400000, guid: 31debb92f8cac684cbafecd2f51143cd, type: 2}
+  applyPresetOnStart: 1
+  logCalibrateFailure: 1
   autoCalibrateOnStart: 1
   waitFramesBeforeCalib: 10
 --- !u!114 &2227352240476788098

@@ -17,6 +17,7 @@
 `feature/` に配置：
 
 - [feature/hand-model.md](feature/hand-model.md)
+- [feature/hand-collider.md](feature/hand-collider.md)
 
 今後 piano / haptics / evaluation などの機能が増えた場合も、この階層に追加する。
 
@@ -26,6 +27,8 @@
 `story/` に配置：
 
 - [story/hand-model-basic.md](story/hand-model-basic.md)
+ - [story/hand-model-improvements.md](story/hand-model-improvements.md)
+ - [story/hand-collider.md](story/hand-collider.md)
 
 story は「今回のタスクで何をもって完了とするか」を定義する。
 
