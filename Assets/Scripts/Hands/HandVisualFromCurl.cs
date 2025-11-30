@@ -49,13 +49,8 @@ public class HandVisualFromCurl : MonoBehaviour
     public HandModelPreset preset;
     public bool applyPresetOnStart = true;
 
-    [Header("Calibration input")]
-    [Tooltip("再キャリブレーションに使う SteamVR Action (例: /actions/default/in/AButton)")]
-    public SteamVR_Action_Boolean recalibrateAction;
-    [Tooltip("通常は右手 A ボタン")]
-    public SteamVR_Input_Sources recalibrateSource = SteamVR_Input_Sources.RightHand;
-    [Tooltip("SteamVR Action が未設定の場合のフォールバックキー (Quest2 右手 A)")]
-    public KeyCode fallbackRecalibrateKey = KeyCode.JoystickButton0;
+    [Header("Calibration (UI trigger)")]
+    [Tooltip("ワールド空間 UI のボタンから呼び出す。ログが不要ならオフ。")]
     public bool logCalibrateFailure = true;
 
     // [finger][joint] の基準回転（curl=0 のときの姿勢）
@@ -114,18 +109,6 @@ public class HandVisualFromCurl : MonoBehaviour
         bool success = CaptureBasePose();
         basePoseCaptured = success;
         return success;
-    }
-
-    private void Update()
-    {
-        if (CheckRecalibrateInput())
-        {
-            bool ok = CalibrateFromSkeleton();
-            if (!ok && logCalibrateFailure)
-            {
-                Debug.LogWarning("[HandVisualFromCurl] 再キャリブレーション失敗。Skeleton 参照を確認してください。");
-            }
-        }
     }
 
     private void LateUpdate()
@@ -212,11 +195,17 @@ public class HandVisualFromCurl : MonoBehaviour
         }
     }
 
-    private bool CheckRecalibrateInput()
+    /// <summary>
+    /// ワールド空間 UI のボタン OnClick に紐付けて呼び出す。
+    /// 左手ボタンは左手オブジェクトのこのメソッド、右手ボタンは右手オブジェクトのこのメソッドを指定する。
+    /// </summary>
+    public void RecalibrateFromUIButton()
     {
-        bool actionPressed = recalibrateAction != null && recalibrateAction.GetStateDown(recalibrateSource);
-        bool keyPressed = Input.GetKeyDown(fallbackRecalibrateKey);
-        return actionPressed || keyPressed;
+        bool ok = CalibrateFromSkeleton();
+        if (!ok && logCalibrateFailure)
+        {
+            Debug.LogWarning("[HandVisualFromCurl] 再キャリブレーション失敗。Skeleton 参照を確認してください。");
+        }
     }
 
     private void ApplyPreset(HandModelPreset p)
