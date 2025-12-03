@@ -12,13 +12,13 @@ MonoBehaviour:
   m_Script: {fileID: 0}
   m_Name: Hand Model Preset
   m_EditorClassIdentifier: Assembly-CSharp::HandModelPreset
-  deadZone: 0
-  gain: 0.7
+  deadZone: 0.021
+  gain: 0.59
   smoothingFactor: 0.25
-  thumbMaxAngle: 90
-  indexMaxAngle: 90
-  middleMaxAngle: 90
-  ringMaxAngle: 90
-  pinkyMaxAngle: 90
+  thumbMaxAngle: 220
+  indexMaxAngle: 220
+  middleMaxAngle: 220
+  ringMaxAngle: 220
+  pinkyMaxAngle: 220
   visualDeadZone: 0
-  visualGamma: 0.7
+  visualGamma: 1.22

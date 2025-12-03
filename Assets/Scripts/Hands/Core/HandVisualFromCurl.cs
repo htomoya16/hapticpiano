@@ -45,6 +45,12 @@ public class HandVisualFromCurl : MonoBehaviour
     public HandModelPreset preset;
     public bool applyPresetOnStart = true;
 
+    [Header("Options")]
+    [Tooltip("visual 側の先頭要素（手の甲/付け根）を曲げない")]
+    public bool skipFirstJoint = true;
+    [Tooltip("再生中に preset が変更されたら即座に再適用する")]
+    public bool reapplyPresetAtRuntime = true;
+
     [Header("Calibration (UI trigger)")]
     [Tooltip("ワールド空間 UI のボタンから呼び出す。ログが不要ならオフ。")]
     public bool logCalibrateFailure = true;
@@ -52,6 +58,7 @@ public class HandVisualFromCurl : MonoBehaviour
     // [finger][joint] の基準回転（curl=0 のときの姿勢）
     private Quaternion[][] baseRot = new Quaternion[5][];
     private bool basePoseCaptured = false;
+    private HandModelPreset appliedPreset = null;
 
     [Header("Calibration")]
     [Tooltip("起動時に数フレーム待って Skeleton から基準ポーズを取る")]
@@ -68,12 +75,7 @@ public class HandVisualFromCurl : MonoBehaviour
         // プリセット適用（左右整合を取りやすくする）
         if (applyPresetOnStart && preset != null)
         {
-            ApplyPreset(preset);
-            // curlSource 側にも共有値を反映
-            if (curlSource != null)
-            {
-                curlSource.ApplyPreset(preset);
-            }
+            ApplyPresetAndSource(preset);
         }
 
         if (!autoCalibrateOnStart)
@@ -111,6 +113,12 @@ public class HandVisualFromCurl : MonoBehaviour
     {
         if (curlSource == null || curlSource.curl01 == null || curlSource.curl01.Length < 5)
             return;
+
+        // 再生中にPresetの値を変えても即時反映したい場合
+        if (reapplyPresetAtRuntime && preset != null)
+        {
+            ApplyPresetAndSource(preset);
+        }
 
         // まだ基準ポーズが取れていないなら何もしない（Start のコルーチン待ち）
         if (!basePoseCaptured)
@@ -181,11 +189,22 @@ public class HandVisualFromCurl : MonoBehaviour
         x = Mathf.Pow(x, gamma);
 
         float totalAngle = maxAngle * x;
-        float perJointAngle = totalAngle / joints.Length;
+
+        int jointCount = joints.Length;
+        int effectiveCount = skipFirstJoint ? jointCount - 1 : jointCount;
+        if (effectiveCount <= 0) return;
+
+        float perJointAngle = totalAngle / effectiveCount;
 
         for (int i = 0; i < joints.Length; i++)
         {
             if (joints[i] == null) continue;
+            if (skipFirstJoint && i == 0)
+            {
+                // 先頭（手の甲）を固定
+                joints[i].localRotation = baseRot[fingerIndex][i];
+                continue;
+            }
             joints[i].localRotation =
                 baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -perJointAngle);
         }
@@ -214,5 +233,16 @@ public class HandVisualFromCurl : MonoBehaviour
         pinkyMaxAngle  = p.pinkyMaxAngle;
         deadZone = p.visualDeadZone;
         gamma = p.visualGamma;
+        appliedPreset = p;
+    }
+
+    private void ApplyPresetAndSource(HandModelPreset p)
+    {
+        ApplyPreset(p);
+        // curlSource 側にも共有値を反映
+        if (curlSource != null)
+        {
+            curlSource.ApplyPreset(p);
+        }
     }
 }
