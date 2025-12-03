@@ -32,12 +32,13 @@ public class MidiPlayer : MonoBehaviour
 	[SerializeField, HideInInspector]
 	bool _preset = false;
 
-	void Start ()
-	{
-		OnPlayTrack = new UnityEvent();
-		OnPlayTrack.AddListener(delegate{FindObjectOfType<MusicText>().StartSequence(MIDISongs[_midiIndex].Details);});
-		
-		_midiIndex = 0;
+void Start ()
+{
+	// 曲開始時にUIへ曲情報を通知
+	OnPlayTrack = new UnityEvent();
+	OnPlayTrack.AddListener(delegate{FindObjectOfType<MusicText>().StartSequence(MIDISongs[_midiIndex].Details);});
+	
+	_midiIndex = 0;
 
 		if (!_preset)
 			PlayCurrentMIDI();
@@ -54,18 +55,20 @@ public class MidiPlayer : MonoBehaviour
 		}
 	}
 
-	void Update ()
+void Update ()
+{
+	// 全曲無しなら停止
+	if (MIDISongs.Length <= 0)
+		enabled = false;
+	
+	if (_midi != null && MidiNotes.Length > 0 && _noteIndex < MidiNotes.Length)
 	{
-		if (MIDISongs.Length <= 0)
-			enabled = false;
-		
-		if (_midi != null && MidiNotes.Length > 0 && _noteIndex < MidiNotes.Length)
-		{
-			_timer += Time.deltaTime * GlobalSpeed * (float)MidiNotes[_noteIndex].Tempo;
+		// 経過時間に合わせて未再生ノートを順次発火
+		_timer += Time.deltaTime * GlobalSpeed * (float)MidiNotes[_noteIndex].Tempo;
 
-			while (_noteIndex < MidiNotes.Length && MidiNotes[_noteIndex].StartTime < _timer)
-			{
-				if (PianoKeyDetector.PianoNotes.ContainsKey(MidiNotes[_noteIndex].Note))
+		while (_noteIndex < MidiNotes.Length && MidiNotes[_noteIndex].StartTime < _timer)
+		{
+			if (PianoKeyDetector.PianoNotes.ContainsKey(MidiNotes[_noteIndex].Note))
 				{
 					if (ShowMIDIChannelColours)
 					{
@@ -83,11 +86,12 @@ public class MidiPlayer : MonoBehaviour
 				_noteIndex++;
 			}
 		}
-		else
-		{
-			SetupNextMIDI();
-		}
+	else
+	{
+		// 曲の終端に達したら次の曲へ
+		SetupNextMIDI();
 	}
+}
 
 	void SetupNextMIDI()
 	{
@@ -110,20 +114,21 @@ public class MidiPlayer : MonoBehaviour
 		PlayCurrentMIDI();
 	}
 
-	void PlayCurrentMIDI()
-	{
-		_timer = 0;
+void PlayCurrentMIDI()
+{
+	_timer = 0;
 
 #if UNITY_EDITOR
 		_path = string.Format("{0}/MIDI/{1}.mid", Application.streamingAssetsPath, MIDISongs[_midiIndex].MIDIFile.name);
 #else
-		_path = string.Format("{0}/MIDI/{1}.mid", Application.streamingAssetsPath, MIDISongs[_midiIndex].SongFileName);
+	_path = string.Format("{0}/MIDI/{1}.mid", Application.streamingAssetsPath, MIDISongs[_midiIndex].SongFileName);
 #endif
-		_midi = new MidiFileInspector(_path);
-		MidiNotes = _midi.GetNotes();
-		_noteIndex = 0;
+	// MIDIを読み出し、再生キューを初期化
+	_midi = new MidiFileInspector(_path);
+	MidiNotes = _midi.GetNotes();
+	_noteIndex = 0;
 
-		OnPlayTrack.Invoke();
+	OnPlayTrack.Invoke();
 	}
 
 	[ContextMenu("Preset MIDI")]
