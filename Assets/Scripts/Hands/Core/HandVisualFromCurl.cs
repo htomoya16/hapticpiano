@@ -2,6 +2,25 @@ using System.Collections;
 using UnityEngine;
 using Valve.VR;
 
+/// <summary>
+/// HandVisualFromCurl で共有するパラメータプリセット。
+/// （HandCurlTracker は生値を渡す前提のため、主にビジュアル用）
+/// </summary>
+[CreateAssetMenu(menuName = "HapticPiano/HandModelPreset")]
+public class HandModelPreset : ScriptableObject
+{
+    [Header("Visual Angles (deg)")]
+    public float thumbMaxAngle = 45f;
+    public float indexMaxAngle = 70f;
+    public float middleMaxAngle = 70f;
+    public float ringMaxAngle = 70f;
+    public float pinkyMaxAngle = 70f;
+
+    [Header("Visual Curve")]
+    [Range(0f, 0.5f)] public float visualDeadZone = 0.05f;
+    [Range(0.5f, 3f)] public float visualGamma = 1.2f;
+}
+
 // HandVisualFromCurl は、HandCurlTracker の curl 値に基づいて
 // 手のモデルの指の関節を回転させるコンポーネントである。
 public class HandVisualFromCurl : MonoBehaviour
@@ -33,6 +52,14 @@ public class HandVisualFromCurl : MonoBehaviour
     public float middleMaxAngle = 70f;
     public float ringMaxAngle   = 70f;
     public float pinkyMaxAngle  = 70f;
+
+    [Header("Bend distribution / initial pose")]
+    [Tooltip("親指の第1屈曲ジョイントを初期状態でどれだけ曲げておくか（deg, マイナスで手のひら側へ）")]
+    public float thumbBaseBendOffset = 10f;
+    [Tooltip("親指の第1屈曲ジョイントにかける曲げ量の重み（他のジョイントは1.0で計算）")]
+    [Range(0.1f, 2f)] public float thumbFirstJointWeight = 0.6f;
+    [Tooltip("人差し指〜小指の第1屈曲ジョイントにかける曲げ量の重み（他のジョイントは1.0で計算）")]
+    [Range(0.1f, 2f)] public float otherFirstJointWeight = 0.5f;
 
     [Header("Curve / Deadzone")]
     [Range(0f, 0.5f)]
@@ -168,7 +195,15 @@ public class HandVisualFromCurl : MonoBehaviour
         for (int i = 0; i < joints.Length; i++)
         {
             if (joints[i] != null)
-                baseRot[fingerIndex][i] = joints[i].localRotation;
+            {
+                var q = joints[i].localRotation;
+                // 親指の第1屈曲ジョイントに初期オフセットを入れる（skipFirstJointがtrueの場合、曲がり始めは index=1 ）
+                if (fingerIndex == 0 && skipFirstJoint && i == 1 && Mathf.Abs(thumbBaseBendOffset) > 0.01f)
+                {
+                    q *= Quaternion.Euler(0f, 0f, -thumbBaseBendOffset);
+                }
+                baseRot[fingerIndex][i] = q;
+            }
         }
     }
 
@@ -191,10 +226,13 @@ public class HandVisualFromCurl : MonoBehaviour
         float totalAngle = maxAngle * x;
 
         int jointCount = joints.Length;
-        int effectiveCount = skipFirstJoint ? jointCount - 1 : jointCount;
-        if (effectiveCount <= 0) return;
+        int startIndex = skipFirstJoint ? 1 : 0;
+        int bendCount = jointCount - startIndex;
+        if (bendCount <= 0) return;
 
-        float perJointAngle = totalAngle / effectiveCount;
+        // 重みづけ：最初の屈曲ジョイントを抑えめに、残りは1.0で配分
+        float firstWeight = (fingerIndex == 0) ? thumbFirstJointWeight : otherFirstJointWeight;
+        float totalWeight = firstWeight + Mathf.Max(0, bendCount - 1); // 残りは1ずつ
 
         for (int i = 0; i < joints.Length; i++)
         {
@@ -205,8 +243,11 @@ public class HandVisualFromCurl : MonoBehaviour
                 joints[i].localRotation = baseRot[fingerIndex][i];
                 continue;
             }
+
+            float w = (i == startIndex) ? firstWeight : 1f;
+            float angle = totalAngle * (w / totalWeight);
             joints[i].localRotation =
-                baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -perJointAngle);
+                baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -angle);
         }
     }
 
