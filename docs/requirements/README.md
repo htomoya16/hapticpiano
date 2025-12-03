@@ -18,6 +18,8 @@
 
 - [feature/hand-model.md](feature/hand-model.md)
 - [feature/hand-collider.md](feature/hand-collider.md)
+- [feature/piano-key-collider.md](feature/piano-key-collider.md)
+- [feature/hand-curl-tuning.md](feature/hand-curl-tuning.md)
 
 今後 piano / haptics / evaluation などの機能が増えた場合も、この階層に追加する。
 
@@ -27,8 +29,10 @@
 `story/` に配置：
 
 - [story/hand-model-basic.md](story/hand-model-basic.md)
- - [story/hand-model-improvements.md](story/hand-model-improvements.md)
- - [story/hand-collider.md](story/hand-collider.md)
+- [story/hand-model-improvements.md](story/hand-model-improvements.md)
+- [story/hand-collider.md](story/hand-collider.md)
+- [story/piano-key-collider-sizing.md](story/piano-key-collider-sizing.md)
+- [story/hand-curl-tuning-basic.md](story/hand-curl-tuning-basic.md)
 
 story は「今回のタスクで何をもって完了とするか」を定義する。
 
