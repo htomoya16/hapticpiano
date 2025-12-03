@@ -39,11 +39,12 @@ public class PianoKey : MonoBehaviour
 	// Debug
 	public bool TestPlay = false;
 
-	void Awake()
-	{
-		AudioSources = new List<AudioSource>();
-		AudioSources.Add(GetComponent<AudioSource>());
-		CurrentAudioSource = AudioSources[0];
+void Awake()
+{
+	// 1鍵分のコンポーネント参照を初期化
+	AudioSources = new List<AudioSource>();
+	AudioSources.Add(GetComponent<AudioSource>());
+	CurrentAudioSource = AudioSources[0];
 
 		_rigidbody = GetComponent<Rigidbody>();
 		_springJoint = GetComponent<HingeJoint>();
@@ -57,18 +58,18 @@ public class PianoKey : MonoBehaviour
 	}
 
 	// Update is called once per frame
-	void Update()
+void Update()
+{
+	Constrain(); // 位置固定とX回転クランプ
+
+	if (_play)
 	{
-		Constrain();
+		KeyPlayMechanics(); // MIDI再生時の押下アニメーション
+	}
 
-		if (_play)
-		{
-			KeyPlayMechanics();
-		}
-
-		if (PianoKeyController.KeyMode == KeyMode.Physical)
-		{
-			if (transform.eulerAngles.x > 350 && transform.eulerAngles.x < 359.5f && !_played)
+	if (PianoKeyController.KeyMode == KeyMode.Physical)
+	{
+		if (transform.eulerAngles.x > 350 && transform.eulerAngles.x < 359.5f && !_played)
 			{
 				if (CurrentAudioSource.clip)
 					StartCoroutine(PlayPressedAudio());
@@ -86,13 +87,14 @@ public class PianoKey : MonoBehaviour
 				
 				_played = false;
 			}
-		}
-		else if (PianoKeyController.KeyMode == KeyMode.ForShow)
+	}
+	else if (PianoKeyController.KeyMode == KeyMode.ForShow)
+	{
+		// デモ用の仮想押下: 時間経過でフェードアウト
+		if (_Timer >= 1)
 		{
-			if (_Timer >= 1)
-			{
-				FadeAll();
-			}
+			FadeAll();
+		}
 			
 			if (_toFade.Count > 0)
 			{
@@ -108,30 +110,32 @@ public class PianoKey : MonoBehaviour
 		}
 	}
 
-	void Constrain()
-	{
-		transform.position = _position;
-		transform.rotation = Quaternion.Euler(transform.eulerAngles.x, _rotation.y, _rotation.z);
+void Constrain()
+{
+	// 初期位置を固定し、Y/Z回転をロック、X回転だけ許容
+	transform.position = _position;
+	transform.rotation = Quaternion.Euler(transform.eulerAngles.x, _rotation.y, _rotation.z);
 
-		if (transform.eulerAngles.x > 0 && transform.eulerAngles.x < 90)
-		{
-			transform.rotation = Quaternion.Euler(0, transform.eulerAngles.y, transform.eulerAngles.z);
-		}
+	if (transform.eulerAngles.x > 0 && transform.eulerAngles.x < 90)
+	{
+		transform.rotation = Quaternion.Euler(0, transform.eulerAngles.y, transform.eulerAngles.z);
+	}
 		if (transform.eulerAngles.x > 90 && transform.eulerAngles.x < 351)
 		{
 			transform.rotation = Quaternion.Euler(352, transform.eulerAngles.y, transform.eulerAngles.z);
 		}
 	}
 
-	void KeyPlayMechanics()
+void KeyPlayMechanics()
+{
+	if (_Timer < 1)
 	{
-		if (_Timer < 1)
+		// スプリング/重力を一時無効化し、トルクで押し込み再現
+		_springJoint.useSpring = false;
+		_constantForce.enabled = false;
+		
+		if (transform.eulerAngles.x < 1 || transform.eulerAngles.x > 359.5f)
 		{
-			_springJoint.useSpring = false;
-			_constantForce.enabled = false;
-			
-			if (transform.eulerAngles.x < 1 || transform.eulerAngles.x > 359.5f)
-			{
 				_rigidbody.AddTorque(-Vector3.right * _velocity / 1024f);
 			}
 
@@ -158,23 +162,24 @@ public class PianoKey : MonoBehaviour
 				Material.color = Color.Lerp(_colour, _originalColour, _Timer);
 			
 			_Timer += Time.deltaTime / _length * _speed;
-		}
-		else
-		{
-			Material.color = _originalColour;
-			_constantForce.enabled = true;
-			_springJoint.useSpring = true;
-			_play = false;
-		}
 	}
-
-	void FadeAll()
+	else
 	{
-		if (_toFade.Count > 0)
-			_toFade.RemoveRange(0, _toFade.Count);
+		Material.color = _originalColour; // 色を元に戻し、物理を再有効化
+		_constantForce.enabled = true;
+		_springJoint.useSpring = true;
+		_play = false;
+	}
+}
 
-		foreach (var audioSource in AudioSources)
-		{
+void FadeAll()
+{
+	// サスティン設定に応じて全AudioSourceを減衰
+	if (_toFade.Count > 0)
+		_toFade.RemoveRange(0, _toFade.Count);
+
+	foreach (var audioSource in AudioSources)
+	{
 			if (audioSource.isPlaying)
 			{
 				audioSource.volume -= Time.deltaTime / (PianoKeyController.SustainPedalPressed ? PianoKeyController.SustainSeconds : 1f);
@@ -185,13 +190,14 @@ public class PianoKey : MonoBehaviour
 		}
 	}
 
-	void FadeList()
+void FadeList()
+{
+	// 最近再生したAudioSourceのみ急速フェード
+	for (int i = 0; i < _toFade.Count; i++)
 	{
-		for (int i = 0; i < _toFade.Count; i++)
+		if (_toFade[i].isPlaying)
 		{
-			if (_toFade[i].isPlaying)
-			{
-				_toFade[i].volume -= Time.deltaTime * 2;
+			_toFade[i].volume -= Time.deltaTime * 2;
 
 				if (_toFade[i].volume <= 0)
 				{
@@ -204,17 +210,18 @@ public class PianoKey : MonoBehaviour
 		}
 	}
 
-	public void Play(float velocity = 10, float length = 1, float speed = 1)
+public void Play(float velocity = 10, float length = 1, float speed = 1)
+{
+	_keyAngle = 360f;
+	
+	if (_play)
 	{
-		_keyAngle = 360f;
-		
-		if (_play)
-		{
-			if (PianoKeyController.RepeatedKeyTeleport)
-				transform.rotation = Quaternion.Euler(_keyAngle, transform.eulerAngles.y, transform.eulerAngles.z);
-			else
-				_rigidbody.AddTorque(Vector3.right * 127);
-		}
+		// 連打時、角度をリセットするか追加トルクを与えるか
+		if (PianoKeyController.RepeatedKeyTeleport)
+			transform.rotation = Quaternion.Euler(_keyAngle, transform.eulerAngles.y, transform.eulerAngles.z);
+		else
+			_rigidbody.AddTorque(Vector3.right * 127);
+	}
 		
 		_velocity = velocity;
 		_length = length;
@@ -237,12 +244,13 @@ public class PianoKey : MonoBehaviour
 		this.Play(velocity, length, speed);
 	}
 
-	IEnumerator PlayPressedAudio()
+IEnumerator PlayPressedAudio()
+{
+	// 物理押下: 再生中なら空いているAudioSourceに切替え
+	if (!PianoKeyController.NoMultiAudioSource && CurrentAudioSource.isPlaying)
 	{
-		if (!PianoKeyController.NoMultiAudioSource && CurrentAudioSource.isPlaying)
-		{
-			bool foundReplacement = false;
-			int index = AudioSources.IndexOf(CurrentAudioSource);
+		bool foundReplacement = false;
+		int index = AudioSources.IndexOf(CurrentAudioSource);
 
 			for (int i = 0; i < AudioSources.Count; i++)
 			{
@@ -270,19 +278,20 @@ public class PianoKey : MonoBehaviour
 		yield return new WaitForFixedUpdate();
 		yield return new WaitForFixedUpdate();
 
-		if (Mathf.Abs(_startAngle - transform.eulerAngles.x) > 0)
-		{
-			CurrentAudioSource.volume = Mathf.Lerp(0, 1, Mathf.Clamp((Mathf.Abs(_startAngle - transform.eulerAngles.x) / 2f), 0, 1));
-		}
+	if (Mathf.Abs(_startAngle - transform.eulerAngles.x) > 0)
+	{
+		CurrentAudioSource.volume = Mathf.Lerp(0, 1, Mathf.Clamp((Mathf.Abs(_startAngle - transform.eulerAngles.x) / 2f), 0, 1));
+	}
 
 		CurrentAudioSource.Play();
 	}
 
-	void PlayVirtualAudio()
+void PlayVirtualAudio()
+{
+	// デモ再生: 物理角度ではなくベロシティで音量を決定
+	if (!PianoKeyController.NoMultiAudioSource && CurrentAudioSource.isPlaying)
 	{
-		if (!PianoKeyController.NoMultiAudioSource && CurrentAudioSource.isPlaying)
-		{
-			bool foundReplacement = false;
+		bool foundReplacement = false;
 			int index = AudioSources.IndexOf(CurrentAudioSource);
 
 			for (int i = 0; i < AudioSources.Count; i++)

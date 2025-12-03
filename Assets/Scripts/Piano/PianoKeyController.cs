@@ -73,27 +73,29 @@ public class PianoKeyController : MonoBehaviour
 
 	private readonly string[] _keyIndex = new string[12] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
 
-	void Awake ()
+void Awake ()
+{
+	if (Sort)
 	{
-		if (Sort)
-		{
-			Regex sortReg = new Regex(@Regex);
-            Notes = Notes.OrderBy(note => sortReg.Match(note.name).Value).ToArray();
-		}
+		// Note配列を指定Regexで並び替え（空なら名前順）
+		Regex sortReg = new Regex(@Regex);
+        Notes = Notes.OrderBy(note => sortReg.Match(note.name).Value).ToArray();
+	}
 
-		var count = 0;
+	var count = 0;
 
 		for (int i = 0; i < PianoKeysParent.childCount; i++)
 		{
-			AudioSource keyAudioSource = PianoKeysParent.GetChild(i).GetComponent<AudioSource>();
+		AudioSource keyAudioSource = PianoKeysParent.GetChild(i).GetComponent<AudioSource>();
+		
+		if (keyAudioSource)
+		{
+			// 子のPianoKeyにAudioClipとノート名を割り当てる
+			PianoKey pianoKey = PianoKeysParent.GetChild(i).GetComponent<PianoKey>();
 			
-			if (keyAudioSource)
-			{
-				PianoKey pianoKey = PianoKeysParent.GetChild(i).GetComponent<PianoKey>();
-				
-				keyAudioSource.clip = Notes[count];
-				PianoNotes.Add(KeyString(count + Array.IndexOf(_keyIndex, StartKey)), pianoKey);
-				pianoKey.PianoKeyController = this;
+			keyAudioSource.clip = Notes[count];
+			PianoNotes.Add(KeyString(count + Array.IndexOf(_keyIndex, StartKey)), pianoKey);
+			pianoKey.PianoKeyController = this;
 				
 				count++;
 			}
@@ -108,10 +110,11 @@ public class PianoKeyController : MonoBehaviour
 		return new string( charArray );
 	}
 
-	void Update()
-	{
-		_sustainPedalLerp -= Time.deltaTime * (SustainPedalPressed ? 1 : -1) * 3.5f;
-		_sustainPedalLerp = Mathf.Clamp01(_sustainPedalLerp);
+void Update()
+{
+	// サスティンペダルの補間（押下/解放角度をスムーズに回転）
+	_sustainPedalLerp -= Time.deltaTime * (SustainPedalPressed ? 1 : -1) * 3.5f;
+	_sustainPedalLerp = Mathf.Clamp01(_sustainPedalLerp);
 
 		if (PedalPressedAngle > PedalReleasedAngle)
 			SustainPedal.localRotation = Quaternion.Lerp(Quaternion.Euler(PedalReleasedAngle, 0, 0), Quaternion.Euler(PedalPressedAngle, 0, 0), _sustainPedalLerp);
