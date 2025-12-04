@@ -210,6 +210,55 @@ c_norm = saturate( sensor_raw / 4095.0 )
 ※ 旧仕様で書かれていた「MCP/PIP/DIP ごとの base/range を個別に持つ方式」は、  
 現バージョンでは採用していない（BaseHand のポーズに吸収させる）。
 
+#### 4.2.3 MCP / PIP の PC1 ベースカーブ（論文データ利用）
+
+より生体に近い指の動きを目指し、以下の論文の **Fig.2 の PC1（第1主成分）** を参照した  
+MCP / PIP の屈曲カーブを `AnimationCurve` で再現し、`curl` に応じて関節角を決める方式を採用する。
+
+- 参照論文（例）:
+  - Tan et al., Journal of Neurophysiology, 2011, Fig.2 の PC1 段における MCP / PIP の波形
+- 事前準備:
+  - Fig.2 から MCP / PIP の PC1 波形を読み取り、CSV / JSON 化したデータ  
+    （例: `PC1_MCP.json`, `PC1_PIP.json`, 付随情報 `info.json`, `wpd.json` 等）を作成済みとする。
+
+**Unity 側での扱い（方針）**
+
+- 各指（とくに index/middle/ring/pinky）について、以下の `AnimationCurve` を用意する:
+  - `pc1McpCurve` : curl 0〜1 に対する MCP 用 PC1 カーブ
+  - `pc1PipCurve` : curl 0〜1 に対する PIP 用 PC1 カーブ
+- これらのカーブは、事前に CSV からサンプリングして Unity エディタ上で構築しておく。
+  - 横軸: 指の屈曲度合いを 0〜1 に正規化したパラメータ `u`（ここでは `u = c_norm` として扱う）
+  - 縦軸: PC1 の値を 0〜1 レンジになるよう正規化した係数 `k`  
+    （最小値を 0、最大値を 1 にスケーリングしておく想定）
+
+**角度計算（PC1 利用版）**
+
+index / middle / ring / pinky について、MCP / PIP の角度は以下のように決める:
+
+```text
+u       = c_norm                  // 0〜1 の curl
+k_MCP   = pc1McpCurve.Evaluate(u) // 0〜1 に正規化された PC1 値
+k_PIP   = pc1PipCurve.Evaluate(u)
+
+θ_MCP = base_MCP + k_MCP * range_MCP
+θ_PIP = base_PIP + k_PIP * range_PIP
+
+// DIP は簡略化のため、PIP に追従させる（例）
+θ_DIP = base_DIP + (k_PIP * range_DIP)
+```
+
+- `base_*` / `range_*` 自体は、従来どおり BaseHand プレハブおよび Inspector で決める。
+- PC1 カーブは「0〜1 の間でどのタイミングで MCP / PIP をどれだけ曲げるか」を規定する形で働き、  
+  線形の `c_norm` よりも realistic な屈曲パターンを与える。
+
+**実装との対応**
+
+- 現バージョンの `HandVisualFromCurl` は「各ジョイントに等分配」のシンプルな実装であり、
+  上記 PC1 ベースの MCP/PIP 駆動は **次のステップ** として別 story で導入する。
+- 実装時には:
+  - PC1 カーブが未設定のときは従来の等分配ロジックを用いるフォールバックを持つ。
+  - PC1 カーブが設定されている指についてのみ、`AnimationCurve` 駆動に切り替える。
+
 ---
 
 ### 4.3 ピアノ演奏の要件
