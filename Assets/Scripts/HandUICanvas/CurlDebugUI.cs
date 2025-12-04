@@ -77,11 +77,15 @@ public class CurlDebugUI : MonoBehaviour
 
         var sb = new System.Text.StringBuilder();
         sb.AppendLine(title);
-        sb.AppendLine("Finger   :   Raw    (FFB)");
-        sb.AppendLine("--------------------------");
+        sb.AppendLine("Finger   :   Raw   Curl   (FFB)");
+        sb.AppendLine("--------------------------------");
 
         for (int i = 0; i < 5; i++)
         {
+            float c01 = (tracker.curl01 != null && tracker.curl01.Length > i)
+                ? tracker.curl01[i]
+                : 0f;
+
             short cFfb = (tracker.curlFfb != null && tracker.curlFfb.Length > i)
                 ? tracker.curlFfb[i]
                 : (short)0;
@@ -90,12 +94,13 @@ public class CurlDebugUI : MonoBehaviour
                 ? tracker.sensorRaw[i]
                 : 0;
 
-            // 名前は左詰め8桁、Raw は右詰め6桁、FFB は右詰め4桁
+            // 名前は左詰め8桁、Raw は右詰め5桁、Curl は右詰め6桁、FFB は右詰め4桁
             string namePart = fingerNames[i].PadRight(8);
-            string rawPart  = raw.ToString().PadLeft(6);
+            string rawPart  = raw.ToString().PadLeft(5);
+            string curlPart = c01.ToString("F3").PadLeft(6);
             string ffbPart  = cFfb.ToString().PadLeft(4);
 
-            sb.AppendLine($"{namePart}: {rawPart}  ({ffbPart})");
+            sb.AppendLine($"{namePart}: {rawPart} {curlPart} ({ffbPart})");
         }
 
         return sb.ToString();
