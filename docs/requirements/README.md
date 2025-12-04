@@ -44,3 +44,19 @@ story は「今回のタスクで何をもって完了とするか」を定義�
 2. feature  
 3. story（作業前に確認）
 
+---
+
+## 5. 研究用データ（外部論文ベースの生データ）
+
+`docs/data/` には、外部論文から抽出した元データなど、  
+要件や実装方針の根拠となる研究用データを配置する。
+
+- `data/PC1-hand-kinematics/PC1_MCP/`
+  - Furuya et al., *Hand kinematics of piano playing*（J Neurophysiol, 2011）の Fig.2 PC1 段から
+    抽出した MCP 用 PC1 波形（index/middle/ring/little）の CSV / 参考画像。
+- `data/PC1-hand-kinematics/PC1_PIP/`
+  - 同論文 Fig.2 PC1 段から抽出した PIP 用 PC1 波形（index/middle/ring/little）の CSV / 参考画像。
+
+これらのデータは、`feature/hand-curl-tuning.md` および  
+`story/hand-curl-tuning-pc1-curve.md` で述べる「PC1 ベースの指関節シナジーモデル」の根拠として利用する。
+

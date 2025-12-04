@@ -1,6 +1,7 @@
 # story-hand-curl-tuning-pc1-curve — PC1 ベースの MCP / PIP カーブ適用
 
-この story は、Tan et al. (2011, Journal of Neurophysiology) Fig.2 の PC1 をもとに、  
+この story は、Furuya et al.「Hand kinematics of piano playing」  
+（Journal of Neurophysiology, 2011, DOI: 10.1152/jn.00378.2011）Fig.2 の PC1 をもとに、  
 MCP / PIP 関節の屈曲パターンを `AnimationCurve` で再現し、  
 `curl01` に応じて MCP / PIP を PC1 波形に沿って動かすための最小セットを定義する。
 
@@ -11,8 +12,9 @@ MCP / PIP 関節の屈曲パターンを `AnimationCurve` で再現し、
 - LucidGloves のセンサ値は ESP 側で 0〜4095 にキャリブレーション済みであり、  
   Unity 側では `HandCurlTracker` が `curl01`（0〜1）を生成済みである。
 - 対象指は index / middle / ring / pinky（親指は当面シンプルな Mapping のままでもよい）。
-- 論文 Fig.2 から MCP / PIP の PC1 波形を読み取って作成した CSV/JSON データが手元にある
-  （例: `PC1_MCP.json`, `PC1_PIP.json`, `info.json`, `wpd.json` 等）。
+- 論文 Fig.2（PC1 段）から MCP / PIP の PC1 波形を指ごと（index/middle/ring/little）に読み取り、
+  `docs/data/PC1-hand-kinematics/PC1_MCP/` および  
+  `docs/data/PC1-hand-kinematics/PC1_PIP/` に CSV / 参考画像として保存済みである。*** End Patch```  Repairing...  Let's trim trailing text.  !*** Begin Patch
 
 ---
 
@@ -69,4 +71,3 @@ MCP / PIP 関節の屈曲パターンを `AnimationCurve` で再現し、
 
 - `feature/hand-curl-tuning.md`
 - `story/hand-curl-tuning-basic.md`
-

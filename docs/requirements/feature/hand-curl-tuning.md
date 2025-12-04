@@ -212,11 +212,14 @@ c_norm = saturate( sensor_raw / 4095.0 )
 
 #### 4.2.3 MCP / PIP の PC1 ベースカーブ（論文データ利用）
 
-より生体に近い指の動きを目指し、以下の論文の **Fig.2 の PC1（第1主成分）** を参照した  
+より生体に近い指の動きを目指し、Furuya et al.「Hand kinematics of piano playing」  
+（Journal of Neurophysiology, 2011, DOI: 10.1152/jn.00378.2011）の  
+**Fig.2 の PC1（第1主成分）** を参照した  
 MCP / PIP の屈曲カーブを `AnimationCurve` で再現し、`curl` に応じて関節角を決める方式を採用する。
 
-- 参照論文（例）:
-  - Tan et al., Journal of Neurophysiology, 2011, Fig.2 の PC1 段における MCP / PIP の波形
+- 参照論文:
+  - Furuya S, Oda S, Kinoshita H. Hand kinematics of piano playing.  
+    Journal of Neurophysiology, 2011, Fig.2 の PC1 段における MCP / PIP の波形
 - 事前準備:
   - Fig.2 から MCP / PIP の PC1 波形を読み取り、CSV / JSON 化したデータ  
     （例: `PC1_MCP.json`, `PC1_PIP.json`, 付随情報 `info.json`, `wpd.json` 等）を作成済みとする。
@@ -258,6 +261,16 @@ k_PIP   = pc1PipCurve.Evaluate(u)
 - 実装時には:
   - PC1 カーブが未設定のときは従来の等分配ロジックを用いるフォールバックを持つ。
   - PC1 カーブが設定されている指についてのみ、`AnimationCurve` 駆動に切り替える。
+  - PC1 カーブの元となる CSV / 画像は、`docs/data/PC1-hand-kinematics/PC1_MCP` および  
+    `docs/data/PC1-hand-kinematics/PC1_PIP` に保存し、どの条件・被験者から抽出したかを README で明示しておく。
+
+**注意（モデルとしての前提）**
+
+- 本システムでは、Furuya et al. の Fig.2 に示された PC1 を
+  「ピアノ演奏における代表的な屈曲シナジー」とみなし、
+  その空間パターン（MCP / PIP の相対寄与）だけを拝借している。
+- 時間波形そのものや、被験者・条件ごとの差異を厳密に再現することは目的とせず、
+  **「生体計測から得られた kinematic synergy を用いた経験的モデル」** として利用する。
 
 ---
 
