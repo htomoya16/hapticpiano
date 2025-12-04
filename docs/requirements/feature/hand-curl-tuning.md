@@ -164,53 +164,51 @@ c_norm = saturate( sensor_raw / 4095.0 )
 
 ### 4.2 各関節への curl 割り当て（Mapping Logic）
 
-#### 4.2.1 index/middle/ring/pinky
+本実装では、  
+**「BaseHand プレハブのポーズ＝curl=0 の姿勢」** とみなし、  
+そこから各指のジョイントを一括で回転させる **シンプルな Mapping** を採用する。
 
-**初期角度（base）**
+#### 4.2.1 Base ポーズの決め方
 
-* MCP: 20〜30°
-* PIP: 10〜20°
-* DIP: 0〜10°
+- 使用するモデル:
+  - `Assets/Prefab/Hands/HandBase/BaseHand_Left.prefab`
+  - `Assets/Prefab/Hands/HandBase/BaseHand_Right.prefab`
+- エディタ上で、ベースとなる手の形状を手動調整する:
+  - 指を「伸ばし気味〜軽く曲がったホームポジション」にしておく。
+  - 左右で極端に違わないように、おおよそ対称になるよう揃えておく。
+- ランタイムでは `HandVisualFromCurl` が `Start()` 内で
+  - 各指ジョイント配列（`thumbJoints` など）の `localRotation` を
+  - `baseRot[finger][joint]` としてキャプチャし、
+  - これを **curl=0 の基準姿勢** とする。
 
-**可動範囲（range）**
+#### 4.2.2 curl → 回転角への変換
 
-* MCP: 30〜50°
-* PIP: 20〜35°
-* DIP: 10〜15°
+- 入力:
+  - `c_norm = HandCurlTracker.curl01[i]`（指ごとの 0〜1）
+- 指ごとの最大屈曲角:
+  - `thumbMaxAngle`, `indexMaxAngle`, `middleMaxAngle`, `ringMaxAngle`, `pinkyMaxAngle`
+  - `HandModelPreset`（ScriptableObject）または `HandVisualFromCurl` の Inspector から調整する。
+- 計算:
+  - 各指について
 
-**角度計算式**
+    ```text
+    totalAngle = maxAngleFinger * c_norm
+    ```
 
-```text
-// c_norm=0 は指が伸びた（ホームポジション）状態
-θ_MCP = base_MCP + c_norm * range_MCP
-θ_PIP = base_PIP + c_norm * range_PIP
-θ_DIP = base_DIP + c_norm * range_DIP
-```
+  - その指に属する全ジョイント（配列に入っている Transform）に対して、
+    `totalAngle` を **均等分配** する。
 
----
+    ```text
+    perJointAngle = totalAngle / jointCount
 
-#### 4.2.2 親指（thumb）
+    joint.localRotation = baseRot[finger][j] * rotZ(-perJointAngle)
+    ```
 
-**初期角度（base）**
+  - 回転軸はローカル Z 軸（`Quaternion.Euler(0, 0, -angle)`）のみとし、
+    横方向の外転・内転は扱わない。
 
-* CMC: 母指球が鍵盤に向くように手動調整
-* MCP: 10〜20°
-* IP: 0〜10°
-
-**可動範囲（range）**
-
-* MCP: 25〜45°
-* IP: 15〜25°
-* CMC は固定または最小限（0〜5°）
-
-**角度計算式**
-
-```text
-// c_norm=0 は指が伸びた（ホームポジション）状態
-θ_CMC = base_CMC + c_norm * range_CMC  (小さめ or 0)
-θ_MCP = base_MCP + c_norm * range_MCP
-θ_IP  = base_IP  + c_norm * range_IP
-```
+※ 旧仕様で書かれていた「MCP/PIP/DIP ごとの base/range を個別に持つ方式」は、  
+現バージョンでは採用していない（BaseHand のポーズに吸収させる）。
 
 ---
 
@@ -220,36 +218,54 @@ c_norm = saturate( sensor_raw / 4095.0 )
 * 強打鍵時（c_norm=1.0）には MCP が主役となり、PIP が追従し、DIP は最小限の変化に留まること。
 * 親指は CMC の初期オフセットにより「指腹の側面が鍵盤方向」を向くこと。
 
+実装上は、BaseHand のポーズと `maxAngle` の調整によって  
+これらの条件に近づける方針とする（コード側で MCP/PIP/DIP を個別制御するのではなく、  
+**見た目のチューニングをプレハブ＋最大角で行う**）。
+
 ---
 
 ### 4.4 ノイズ低減（Filtering）
 
-* curl 値は一次ローパスフィルタまたは指数平均を適用し、  
-  遅延を生じさせない範囲（8〜15 Hz 程度）で平滑化すること。
-* フィルタは `sensor_raw` に対して行っても `c_norm` に対して行ってもよいが、  
-  「実測値と VR 表示のタイミングが大きくズレないこと」を優先する。
+* curl 値に対してローパスフィルタ（指数平均など）を入れることで、  
+  ガクつきを抑えつつ遅延を抑える、という方針は維持する。
+* ただし **現バージョンの実装ではフィルタ処理はまだ入れていない** ため、  
+  将来の拡張（別 story）として扱う。
 
 ---
 
-### 4.5 目標角・レイテンシ・キャリブ手順（ピアノ演奏向け目安）
+### 4.5 目標角・レイテンシ・キャリブレーションの考え方
 
 - 目標関節角（打鍵最大付近の目安）  
   - 親指: MCP 70° / IP 50°  
   - 他指: MCP 70–80° / PIP 90° / DIP 45° （奏者・曲に応じ ±調整可）
 - レイテンシ目標: センサ入力 → curl 正規化 → 可視化・物理反映まで **20 ms 以下**。
 
-- キャリブレーション手順（視覚側）:
+#### 4.5.1 ESP 側キャリブレーション
 
-  1. 「腕を水平に伸ばし、指を伸展（ホームポジション）」  
-     → ワールド空間 UI のキャリブボタンを押下 → 1 秒程度静止する。
-  2. この間に:
-     * ESP 側ではすでに `0〜4095` へのキャリブレーションが行われている前提とし、  
-       Unity 側では追加でセンサキャリブは行わない。
-     * `HandVisualFromCurl` は **現在の Visual Hand の全指関節 `localRotation` を  
-       `curl = 0` の基準姿勢 (`baseRot`) として保存** する。
+- ESP 側ファームウェアで、各指のポテンショメータに対し
 
-- 以降、`curl = 0` では Visual Hand は `baseRot` の姿勢を保ち、  
-  `curl > 0` に応じて MCP/PIP/DIP へ追加回転を分配する。
+  - 指を伸ばした状態で ≒0
+  - 指を最大限握った状態で ≒4095
+
+  になるようキャリブレーションを行う。  
+- Unity 側は **`0〜4095 → 0〜1 の線形正規化のみ** を行い、  
+  追加のセンサキャリブレーションは行わない。
+
+#### 4.5.2 Unity 側（Visual）の基準姿勢
+
+- Visual 側の **curl=0 の基準姿勢** は、BaseHand プレハブのポーズで決める:
+  1. エディタで BaseHand_Left/Right をシーンに配置し、
+     ホームポジションとして望ましい指の形に調整する。
+  2. 必要に応じてプレハブに Apply しておく。
+  3. ランタイム開始時、`HandVisualFromCurl` が `Start()` 内で
+     すべての指ジョイントの `localRotation` を `baseRot` としてキャプチャする。
+
+- 以降の挙動:
+  - `curl = 0` では Visual Hand は `baseRot` の姿勢を保つ。
+  - `curl > 0` に応じて、各ジョイントに等分された回転を追加する。
+
+- ワールド空間 UI からの「再キャリブレーションボタン」は現バージョンでは用意せず、  
+  **ESP 側キャリブ＋BaseHand 調整で完結** させる。
 
 ---
 

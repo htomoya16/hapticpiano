@@ -122,6 +122,31 @@ public class HandSerialInput : MonoBehaviour
         ClosePort();
     }
 
+    /// <summary>
+    /// ランタイム中に COM ポート名を変更し、必要なら再接続する。
+    /// （設定 UI から呼び出す想定）
+    /// </summary>
+    public void SetPortNameAndReconnect(string newPortName)
+    {
+        if (string.IsNullOrWhiteSpace(newPortName))
+        {
+            if (logErrors)
+            {
+                Debug.LogWarning("[HandSerialInput] newPortName が空です。");
+            }
+            return;
+        }
+
+        // いったん現在のポートを閉じる
+        ClosePort();
+
+        // 新しいポート名に更新
+        portName = newPortName.Trim();
+
+        // 設定変更時は autoOpenOnStart に関係なく即座に再接続を試みる
+        OpenPort();
+    }
+
     public void OpenPort()
     {
         if (string.IsNullOrEmpty(portName))
