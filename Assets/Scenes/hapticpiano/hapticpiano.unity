@@ -2276,6 +2276,11 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+--- !u!1 &1912735800 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 2046445255850138654, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+  m_PrefabInstance: {fileID: 1613305544300117523}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1000008380346587
 GameObject:
   m_ObjectHideFlags: 0
@@ -4101,7 +4106,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 3275369727746654517, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
   m_PrefabInstance: {fileID: 1613305544300117523}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 1912735800}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 29e3e4511966ba94d8ba0b98c6c62f82, type: 3}
@@ -4382,7 +4387,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 2046445255850138654, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+      insertIndex: 4
+      addedObject: {fileID: 3192659377310273635}
   m_SourcePrefab: {fileID: 100100000, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
 --- !u!1 &1727010574500702057
 GameObject:
@@ -5113,6 +5121,39 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 5432077209257243296, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
   m_PrefabInstance: {fileID: 1613305544300117523}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &3192659377310273632 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 1594893996418382267, guid: 30b75093e60bf834fbbb0bf87dcc07c0, type: 3}
+  m_PrefabInstance: {fileID: 1613305544300117523}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1912735800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5715f914e33c6e498c7ccbc81a141cb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!114 &3192659377310273635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1912735800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 633a3769fc6d2164091cd7a36ba220ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  portName: COM5
+  baudRate: 115200
+  autoOpenOnStart: 1
+  targetTracker: {fileID: 3192659377310273632}
+  sendRequest: 1
+  requestInterval: 0.01
+  requestCommand: 
+  logOpenClose: 1
+  logErrors: 1
+  lastEncodedLine: 
 --- !u!1 &3199280042229914899
 GameObject:
   m_ObjectHideFlags: 0

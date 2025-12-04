@@ -74,8 +74,12 @@ SteamVR 手モデルの各関節（MCP / PIP / DIP、親指は CMC / MCP / IP）
     * `C` = 中指 (middle)
     * `D` = 薬指 (ring)
     * `E` = 小指 (pinky)
+    * （オプション）`K` = キャリブレーション中フラグ  
+      - 行内のどこかに `K`（または `k`）が含まれている場合、そのフレームは「位置合わせ用キャリブレーション中」とみなす。
   * 各文字に続く数字列が、その指のポテンショメータ生値（ADC 値の整数）  
-    * 想定レンジ: おおよそ 0〜数千（実際の範囲はハード側設定に依存）
+    * レンジ: **0〜4095**（ESP 側でキャリブレーション済み）  
+      - `0`   = 指が伸びている（ホームポジション）  
+      - `4095`= 完全に握っている（最大屈曲）
 
 * Unity 側 (`HandCurlTracker`) では、受信文字列をパースし、  
   指ごとに以下のような配列として保持する。
@@ -99,7 +103,7 @@ SteamVR 手モデルの各関節（MCP / PIP / DIP、親指は CMC / MCP / IP）
   * `curl_ring`
   * `curl_pinky`
 
-* これらは `HandCurlTracker` が `sensorRaw` とキャリブレーション情報から計算し、  
+* これらは `HandCurlTracker` が `sensorRaw` から計算し、  
   `HandVisualFromCurl` や Force Feedback へ渡す共通インタフェースとする。
 
 * 意味付け:
@@ -112,32 +116,36 @@ SteamVR 手モデルの各関節（MCP / PIP / DIP、親指は CMC / MCP / IP）
 * SteamVR Skeleton ベースの手モデルの各ボーンのローカル回転（Quaternion または Euler）
 * 指腹 collider の位置（ピアノ鍵盤との接触判定用）
 
+### 3.4 キャリブレーションフラグ（K）
+
+* ESP → Unity のシリアル文字列に `K` が含まれている間、そのフレームは「キャリブレーション中」とみなす。
+* Unity 側では以下の挙動を行うこと:
+  * `K` を含むフレームでは `sensorRaw` を更新せず、直前フレームの値を保持する（= 指の curl を凍結）。
+  * 同時に、VR 上の手の Transform を固定し、実際の手を動かしても VR 手が追従しない状態にする。  
+    （例: `HandFreezeOnCalibrate` のようなコンポーネントで、`HandSerialInput.isCalibrating` を監視して手の位置・向きを固定する）
+* `K` を含まないフレームに戻った時点で、通常の追従動作（センサ値更新 + Transform 更新）に復帰する。
+
 ---
 
 ## 4. 機能要件
 
 （実装対象スクリプト: `Assets/Scripts/Hands/Core/HandCurlTracker.cs`, `Assets/Scripts/Hands/Core/HandVisualFromCurl.cs`）
 
-### 4.1 curl の正規化・キャリブレーション
+### 4.1 curl の正規化（ESP 側キャリブレーション前提）
 
 #### 対象
 
 * LucidGloves ポテンショメータから取得した指ごとのセンサ値 `sensor_raw`（整数）
-* ホームポジション/最大押し込み時の基準値:
-  * `sensor_rest` : 指を伸ばしたホームポジション
-  * `sensor_press`: 最大押し込み（強く曲げた状態）
+  * ESP 側のキャリブレーションにより、各指で  
+    `0` = 伸展（ホームポジション）、`4095` = 最大屈曲 に近い状態になっていることを前提とする。
 
-#### 手順（センサ側）
+#### 手順（Unity 側）
 
-1. ユーザが「腕を水平に伸ばし、指を伸展したホームポジション」を取る  
-   → 一定時間（例: 0.5〜1.0 秒）`sensor_raw` をサンプリングし、  
-   指ごとに平均を `sensor_rest` として記録する。
-2. ユーザが最大屈曲（鍵盤を強く押し込む動作）を行う  
-   → 同様に `sensor_press` として記録する。
-3. ランタイムでは次式で正規化して curl を得る:
+1. ESP から届いた `sensor_raw`（0〜4095）をそのまま `HandCurlTracker.sensorRaw[i]` に格納する。
+2. ランタイムでは次式で正規化して curl を得る:
 
 ```text
-c_norm = saturate( (sensor_raw - sensor_rest) / (sensor_press - sensor_rest) )
+c_norm = saturate( sensor_raw / 4095.0 )
 ```
 
 * `saturate(x) = min( max(x, 0), 1 )`
@@ -146,10 +154,11 @@ c_norm = saturate( (sensor_raw - sensor_rest) / (sensor_press - sensor_rest) )
 
 #### 要件
 
-* 指ごとに `sensor_rest` / `sensor_press` を保持し、再キャリブレーション可能であること。
-* `sensor_press ≒ sensor_rest` など異常値（分母が極端に小さいなど）の場合は、
-  * デフォルト値にフォールバックする、  
-  * または `c_norm = 0` に固定する等、安全な動作に切り替えること。
+* ESP 側キャリブレーションにより、少なくとも以下が成り立つこと:
+  * 指を伸ばした状態で `sensor_raw ≒ 0`（ノイズを除き、極端に大きくない）。  
+  * 指を最大限握った状態で `sensor_raw ≒ 4095`（あるいは十分大きな値）。
+* Unity 側では、必要に応じて「下限オフセット」「上限クリップ」「ゲイン」などの軽微な補正を行ってもよいが、  
+  基本は `0〜4095 → 0〜1` の線形マッピングとする。
 
 ---
 
@@ -229,16 +238,15 @@ c_norm = saturate( (sensor_raw - sensor_rest) / (sensor_press - sensor_rest) )
   - 他指: MCP 70–80° / PIP 90° / DIP 45° （奏者・曲に応じ ±調整可）
 - レイテンシ目標: センサ入力 → curl 正規化 → 可視化・物理反映まで **20 ms 以下**。
 
-- キャリブレーション手順（センサ＋視覚）:
+- キャリブレーション手順（視覚側）:
 
   1. 「腕を水平に伸ばし、指を伸展（ホームポジション）」  
      → ワールド空間 UI のキャリブボタンを押下 → 1 秒程度静止する。
   2. この間に:
-     * `HandCurlTracker` は `sensor_rest`（必要なら `sensor_press`）を更新する。
+     * ESP 側ではすでに `0〜4095` へのキャリブレーションが行われている前提とし、  
+       Unity 側では追加でセンサキャリブは行わない。
      * `HandVisualFromCurl` は **現在の Visual Hand の全指関節 `localRotation` を  
        `curl = 0` の基準姿勢 (`baseRot`) として保存** する。
-  3. 別途「最大押し込み」用ボタンがある場合は、ユーザが最大屈曲を行った状態で押下し、  
-     `sensor_press` を更新する。
 
 - 以降、`curl = 0` では Visual Hand は `baseRot` の姿勢を保ち、  
   `curl > 0` に応じて MCP/PIP/DIP へ追加回転を分配する。
@@ -262,7 +270,7 @@ c_norm = saturate( (sensor_raw - sensor_rest) / (sensor_press - sensor_rest) )
 * LucidGloves / SteamVR Skeleton / その他のグローブでも  
   同一の 0〜1 curl インタフェースで扱えるよう抽象化すること。
 * 具体的には:
-  * `HandCurlTracker` は「入力ソース依存の生値 → 0〜1 curl」変換の責務を負う。
+  * `HandCurlTracker` は「ESP などから届いたキャリブ済み生値 → 0〜1 curl」変換の責務を負う。
   * `HandVisualFromCurl` は `curl01` のみを参照し、入力ソースの違いを意識しない。
 
 ---
@@ -292,11 +300,10 @@ c_norm = saturate( (sensor_raw - sensor_rest) / (sensor_press - sensor_rest) )
 
 本要件の中心は以下である：
 
-* **LucidGloves のポテンショメータ値を、指ごとにキャリブレーションして 0〜1 curl に正規化すること。**
+* **LucidGloves のポテンショメータ値は ESP 側でキャリブレーションし、Unity 側では 0〜4095 → 0〜1 に正規化すること。**
 * **curl（指一本につき 1 値）を MCP/PIP/DIP へ分配する「比率＋オフセット」モデルで動かすこと。**
 * **親指は CMC を固定オフセットで向き調整し、曲げは MCP/IP が担当すること。**
 * **視覚側は Skeleton fingerCurl ではなく、「キャリブ時に保存した Visual Hand の姿勢」を curl=0 の基準とすること。**
 
 この仕様に従うことで、  
 LucidGloves の制約下でも「それらしいピアノ演奏手」を Unity・SteamVR 上に実現できる。
-

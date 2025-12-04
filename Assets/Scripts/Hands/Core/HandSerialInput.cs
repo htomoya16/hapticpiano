@@ -39,6 +39,10 @@ public class HandSerialInput : MonoBehaviour
     [Tooltip("最後に受信した生データ 1 行分（例: A2301B2391C3431D3313E1234）")]
     [SerializeField] private string lastEncodedLine;
 
+    [Header("Calibrate Flag (K)")]
+    [Tooltip("現在 K フラグを受信しているか（キャリブレーション中）")]
+    public bool isCalibrating = false;
+
     private SerialPort _port;
     private string _latestLine;
     private float _lastRequestTime;
@@ -101,7 +105,15 @@ public class HandSerialInput : MonoBehaviour
             // インスペクタから生データを確認できるように保存
             lastEncodedLine = _latestLine;
 
-            targetTracker.UpdateSensorFromEncodedString(_latestLine);
+            // K フラグが含まれている間は「キャリブレーション中」とみなし、
+            // HandCurlTracker へのセンサ更新を止める（指の動きを凍結する）
+            bool hasK = _latestLine.IndexOf('K') >= 0 || _latestLine.IndexOf('k') >= 0;
+            isCalibrating = hasK;
+
+            if (!hasK)
+            {
+                targetTracker.UpdateSensorFromEncodedString(_latestLine);
+            }
         }
     }
 
