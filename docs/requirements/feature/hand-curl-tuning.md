@@ -201,8 +201,8 @@ c_norm = saturate( sensor_raw / 4095.0 )
 
 * curl 値に対してローパスフィルタ（指数平均など）を入れることで、  
   ガクつきを抑えつつ遅延を抑える、という方針は維持する。
-* ただし **現バージョンの実装ではフィルタ処理はまだ入れていない** ため、  
-  将来の拡張（別 story）として扱う。
+* 具体的なフィルタ実装（`sensorRaw` → `curlRaw` → `curl01` へのローパス処理）や  
+  パラメータ調整の要件は `story/hand-curl-filtering-noise-reduction.md` で扱う。
 
 ---
 

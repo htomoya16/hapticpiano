@@ -36,6 +36,7 @@
 - [story/hand-curl-tuning-basic.md](story/hand-curl-tuning-basic.md)
 - [story/hand-kinematics-pc1-data.md](story/hand-kinematics-pc1-data.md)
 - [story/hand-kinematics-tuning-pc1-curve.md](story/hand-kinematics-tuning-pc1-curve.md)
+- [story/hand-curl-filtering-noise-reduction.md](story/hand-curl-filtering-noise-reduction.md)
 
 story は「今回のタスクで何をもって完了とするか」を定義する。
 

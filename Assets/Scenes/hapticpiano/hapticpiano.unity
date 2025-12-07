@@ -5965,6 +5965,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1686190267}
     m_Modifications:
+    - target: {fileID: 498196789768907375, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 1000
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692188228894136600, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: preset
+      value: 
+      objectReference: {fileID: 11400000, guid: 3bcfa2caa4c34284c9c52c4c0402c9f9, type: 2}
+    - target: {fileID: 1692188228894136600, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: filterAlpha
+      value: 0.25
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692188228894136600, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: snapThreshold
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 1692188228894136600, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: noiseThreshold
+      value: 0.011
+      objectReference: {fileID: 0}
     - target: {fileID: 2463358402738049575, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: otherHand
       value: 
@@ -5973,6 +5993,10 @@ PrefabInstance:
       propertyPath: m_Camera
       value: 
       objectReference: {fileID: 1687686149}
+    - target: {fileID: 3012095023978704520, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 1000
+      objectReference: {fileID: 0}
     - target: {fileID: 3814381015753934336, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: cameraTransform
       value: 
@@ -6559,6 +6583,14 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1686190267}
     m_Modifications:
+    - target: {fileID: 987898318848378252, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
+      propertyPath: preset
+      value: 
+      objectReference: {fileID: 11400000, guid: 3bcfa2caa4c34284c9c52c4c0402c9f9, type: 2}
+    - target: {fileID: 2354909633541799815, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 1000
+      objectReference: {fileID: 0}
     - target: {fileID: 2576024085140815269, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: m_Camera
       value: 
@@ -6607,6 +6639,10 @@ PrefabInstance:
       propertyPath: handRoot
       value: 
       objectReference: {fileID: 736942787}
+    - target: {fileID: 5590827864535457412, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 1000
+      objectReference: {fileID: 0}
     - target: {fileID: 6727141065411101357, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: cameraTransform
       value: 
