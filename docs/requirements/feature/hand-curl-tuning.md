@@ -9,6 +9,10 @@
 SteamVR 手モデルの各関節（MCP / PIP / DIP、親指は CMC / MCP / IP）を駆動して  
 **ピアノ演奏時の指の形状・動きに近いモーションを生成する**ことを目的とする。
 
+PC1 ベースの指モーションモデルそのもの（`curl → phase → PC1 → angle` の考え方など）は  
+`feature/hand-kinematics.md` にまとめ、  
+本仕様ではそれを前提とした **curl 値からの具体的な分配・実装側の要件** を扱う。
+
 ここでいう curl 値は「縦方向の屈曲のみ」を表す 1 次元センサ値であり、横方向（外転・内転）は扱わない前提とする。
 
 補足:
@@ -180,99 +184,6 @@ c_norm = saturate( sensor_raw / 4095.0 )
   - 各指ジョイント配列（`thumbJoints` など）の `localRotation` を
   - `baseRot[finger][joint]` としてキャプチャし、
   - これを **curl=0 の基準姿勢** とする。
-
-#### 4.2.2 curl → 回転角への変換
-
-- 入力:
-  - `c_norm = HandCurlTracker.curl01[i]`（指ごとの 0〜1）
-- 指ごとの最大屈曲角:
-  - `thumbMaxAngle`, `indexMaxAngle`, `middleMaxAngle`, `ringMaxAngle`, `pinkyMaxAngle`
-  - `HandModelPreset`（ScriptableObject）または `HandVisualFromCurl` の Inspector から調整する。
-- 計算:
-  - 各指について
-
-    ```text
-    totalAngle = maxAngleFinger * c_norm
-    ```
-
-  - その指に属する全ジョイント（配列に入っている Transform）に対して、
-    `totalAngle` を **均等分配** する。
-
-    ```text
-    perJointAngle = totalAngle / jointCount
-
-    joint.localRotation = baseRot[finger][j] * rotZ(-perJointAngle)
-    ```
-
-  - 回転軸はローカル Z 軸（`Quaternion.Euler(0, 0, -angle)`）のみとし、
-    横方向の外転・内転は扱わない。
-
-※ 旧仕様で書かれていた「MCP/PIP/DIP ごとの base/range を個別に持つ方式」は、  
-現バージョンでは採用していない（BaseHand のポーズに吸収させる）。
-
-#### 4.2.3 MCP / PIP の PC1 ベースカーブ（論文データ利用）
-
-より生体に近い指の動きを目指し、Furuya et al.「Hand kinematics of piano playing」  
-（Journal of Neurophysiology, 2011, DOI: 10.1152/jn.00378.2011）の  
-**Fig.2 の PC1（第1主成分）** を参照した  
-MCP / PIP の屈曲カーブを `AnimationCurve` で再現し、`curl` に応じて関節角を決める方式を採用する。
-
-- 参照論文:
-  - Furuya S, Oda S, Kinoshita H. Hand kinematics of piano playing.  
-    Journal of Neurophysiology, 2011, Fig.2 の PC1 段における MCP / PIP の波形
-- 事前準備:
-  - Fig.2 から MCP / PIP の PC1 波形を読み取り、CSV / JSON 化したデータ  
-    （例: `PC1_MCP.json`, `PC1_PIP.json`, 付随情報 `info.json`, `wpd.json` 等）を作成済みとする。
-
-**Unity 側での扱い（方針）**
-
-- 各指（とくに index/middle/ring/pinky）について、以下の `AnimationCurve` を用意する:
-  - `pc1McpCurve` : curl 0〜1 に対する MCP 用 PC1 カーブ
-  - `pc1PipCurve` : curl 0〜1 に対する PIP 用 PC1 カーブ
-- これらのカーブは、事前に CSV からサンプリングして Unity エディタ上で構築しておく。
-  - 横軸: 指の屈曲度合いを 0〜1 に正規化したパラメータ `u`（ここでは `u = c_norm` として扱う）
-  - 縦軸: PC1 の値を 0〜1 レンジになるよう正規化した係数 `k`  
-    （最小値を 0、最大値を 1 にスケーリングしておく想定）
-
-**角度計算（PC1 利用版）**
-
-index / middle / ring / pinky について、MCP / PIP の角度は以下のように決める:
-
-```text
-u       = c_norm                  // 0〜1 の curl
-k_MCP   = pc1McpCurve.Evaluate(u) // 0〜1 に正規化された PC1 値
-k_PIP   = pc1PipCurve.Evaluate(u)
-
-θ_MCP = base_MCP + k_MCP * range_MCP
-θ_PIP = base_PIP + k_PIP * range_PIP
-
-// DIP は簡略化のため、PIP に追従させる（例）
-θ_DIP = base_DIP + (k_PIP * range_DIP)
-```
-
-- `base_*` / `range_*` 自体は、従来どおり BaseHand プレハブおよび Inspector で決める。
-- PC1 カーブは「0〜1 の間でどのタイミングで MCP / PIP をどれだけ曲げるか」を規定する形で働き、  
-  線形の `c_norm` よりも realistic な屈曲パターンを与える。
-
-**実装との対応**
-
-- 現バージョンの `HandVisualFromCurl` は「各ジョイントに等分配」のシンプルな実装であり、
-  上記 PC1 ベースの MCP/PIP 駆動は **次のステップ** として別 story で導入する。
-- 実装時には:
-  - PC1 カーブが未設定のときは従来の等分配ロジックを用いるフォールバックを持つ。
-  - PC1 カーブが設定されている指についてのみ、`AnimationCurve` 駆動に切り替える。
-  - PC1 カーブの元となる CSV / 画像は、`docs/data/PC1-hand-kinematics/PC1_MCP` および  
-    `docs/data/PC1-hand-kinematics/PC1_PIP` に保存し、どの条件・被験者から抽出したかを README で明示しておく。
-
-**注意（モデルとしての前提）**
-
-- 本システムでは、Furuya et al. の Fig.2 に示された PC1 を
-  「ピアノ演奏における代表的な屈曲シナジー」とみなし、
-  その空間パターン（MCP / PIP の相対寄与）だけを拝借している。
-- 時間波形そのものや、被験者・条件ごとの差異を厳密に再現することは目的とせず、
-  **「生体計測から得られた kinematic synergy を用いた経験的モデル」** として利用する。
-
----
 
 ### 4.3 ピアノ演奏の要件
 

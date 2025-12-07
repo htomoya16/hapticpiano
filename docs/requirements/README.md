@@ -20,6 +20,7 @@
 - [feature/hand-collider.md](feature/hand-collider.md)
 - [feature/piano-key-collider.md](feature/piano-key-collider.md)
 - [feature/hand-curl-tuning.md](feature/hand-curl-tuning.md)
+- [feature/hand-kinematics.md](feature/hand-kinematics.md)
 
 今後 piano / haptics / evaluation などの機能が増えた場合も、この階層に追加する。
 
@@ -33,6 +34,8 @@
 - [story/hand-collider.md](story/hand-collider.md)
 - [story/piano-key-collider-sizing.md](story/piano-key-collider-sizing.md)
 - [story/hand-curl-tuning-basic.md](story/hand-curl-tuning-basic.md)
+- [story/hand-kinematics-pc1-data.md](story/hand-kinematics-pc1-data.md)
+- [story/hand-curl-tuning-pc1-curve.md](story/hand-curl-tuning-pc1-curve.md)
 
 story は「今回のタスクで何をもって完了とするか」を定義する。
 
@@ -57,6 +60,5 @@ story は「今回のタスクで何をもって完了とするか」を定義�
 - `data/PC1-hand-kinematics/PC1_PIP/`
   - 同論文 Fig.2 PC1 段から抽出した PIP 用 PC1 波形（index/middle/ring/little）の CSV / 参考画像。
 
-これらのデータは、`feature/hand-curl-tuning.md` および  
-`story/hand-curl-tuning-pc1-curve.md` で述べる「PC1 ベースの指関節シナジーモデル」の根拠として利用する。
-
+これらのデータは、`feature/hand-kinematics.md` および  
+`feature/hand-curl-tuning.md` で述べる「PC1 ベースの指関節シナジーモデル」の根拠として利用する。

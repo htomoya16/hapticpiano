@@ -1,73 +1,120 @@
-# story-hand-curl-tuning-pc1-curve — PC1 ベースの MCP / PIP カーブ適用
+# story-hand-curl-tuning-pc1-curve — PC1 ベース打鍵モーション統合
 
-この story は、Furuya et al.「Hand kinematics of piano playing」  
-（Journal of Neurophysiology, 2011, DOI: 10.1152/jn.00378.2011）Fig.2 の PC1 をもとに、  
-MCP / PIP 関節の屈曲パターンを `AnimationCurve` で再現し、  
-`curl01` に応じて MCP / PIP を PC1 波形に沿って動かすための最小セットを定義する。
-
----
-
-## 前提
-
-- LucidGloves のセンサ値は ESP 側で 0〜4095 にキャリブレーション済みであり、  
-  Unity 側では `HandCurlTracker` が `curl01`（0〜1）を生成済みである。
-- 対象指は index / middle / ring / pinky（親指は当面シンプルな Mapping のままでもよい）。
-- 論文 Fig.2（PC1 段）から MCP / PIP の PC1 波形を指ごと（index/middle/ring/little）に読み取り、
-  `docs/data/PC1-hand-kinematics/PC1_MCP/` および  
-  `docs/data/PC1-hand-kinematics/PC1_PIP/` に CSV / 参考画像として保存済みである。*** End Patch```  Repairing...  Let's trim trailing text.  !*** Begin Patch
+この story は、`curl` 値（0〜1）から PC1 ベースの `AnimationCurve` を経由して  
+MCP / PIP / DIP 角度を決定し、SteamVR 手モデルに適用することで、  
+**ピアノ打鍵らしい指関節シナジー** を実現するための最小セットを定義する。
 
 ---
 
-## 受け入れ条件（完了判定）
+## 1. この story の目的
 
-### 1. PC1 データの AnimationCurve 化
+- `feature/hand-kinematics.md` で定義した  
+  `curl → phase → PC1 → angle` パイプラインを、実際の手モデルに適用する。
+- 強打鍵時に MCP が主役となり、PIP が追従し、DIP が折れすぎないといった  
+  **指関節間の協調パターン** を再現する。
+- `feature/hand-curl-tuning.md` / `story-hand-curl-tuning-basic.md` で整備した  
+  「curl 正規化」と整合する形で PC1 を組み込む。
 
-- Unity プロジェクト内に、以下のいずれかの形で PC1 カーブが表現されていること:
-  - `ScriptableObject` あるいは `AnimationCurve` フィールドとして、
-    - `pc1McpCurve`（MCP 用）
-    - `pc1PipCurve`（PIP 用）
-    が定義されている。
-- カーブの仕様:
-  - 横軸: `u = 0〜1`（`u = curl01` をそのまま使う）
-  - 縦軸: `k = 0〜1` に正規化された PC1 値
-    - Fig.2 の PC1 振幅を、最小値→0、最大値→1 となるようスケーリング済み。
+---
 
-### 2. MCP / PIP の角度計算が PC1 ベースになっている
+## 2. 受け入れ条件（完了判定）
 
-- `HandVisualFromCurl` もしくはそれに相当するビジュアル制御コードにおいて、
-  index / middle / ring / pinky の MCP / PIP 角度が次の形で計算されていること:
+### 2.1 curl → phase 変換の実装
 
-  ```text
-  u       = curl01[finger]          // 0〜1
-  k_MCP   = pc1McpCurve.Evaluate(u) // 0〜1
-  k_PIP   = pc1PipCurve.Evaluate(u) // 0〜1
+- 少なくとも 1 本の指（推奨: index）について、  
+  以下のロジックで `curl`（0〜1）から `phase`（0〜1）が算出されている：
 
-  θ_MCP = base_MCP + k_MCP * range_MCP
-  θ_PIP = base_PIP + k_PIP * range_PIP
-
-  // DIP は簡略化のため、PIP をスケールして利用（例）
-  θ_DIP = base_DIP + (k_PIP * range_DIP)
+  ```csharp
+  if (curl <= curl_contact)      phase = 0f;
+  else if (curl >= curl_bottom)  phase = 1f;
+  else                            phase = Mathf.InverseLerp(curl_contact, curl_bottom, curl);
   ```
 
-- `base_*` / `range_*` は、`feature/hand-curl-tuning.md` に記述した方針どおり  
-  BaseHand プレハブ＋Inspector で決める。
+- `curl_contact` と `curl_bottom` はインスペクタから調整可能であり、  
+  例えば `curl_contact = 0.2〜0.3`, `curl_bottom = 0.8〜0.9` 程度を初期値とする。
 
-### 3. フォールバック動作（PC1 未設定時）
+- デバッグ UI などで、`curl` を 0→1 にスライダー操作したとき、  
+  `phase` が 0→1 に単調増加していることが確認できる。
 
-- `pc1McpCurve` / `pc1PipCurve` が未設定（null）の場合は、
-  現行の「totalAngle を全ジョイントへ等分配するシンプルな Mapping」に自動フォールバックする。
-- これにより、PC1 カーブを差し替える前後で最低限の互換性が維持される。
+### 2.2 phase → PC1 → angle 変換の実装
 
-### 4. デバッグ確認
+- MCP / PIP の各関節について、PC1 ベースの角度計算が行われている：
 
-- `CurlDebugUI` や一時的なデバッグコードなどを用いて、
-  - `curl01` を 0→1 にゆっくり変化させたとき、
-  - MCP と PIP の角度変化が **線形ではなく PC1 由来のカーブを描いている** ことを確認できる。
-- 少なくとも index finger について、PC1 カーブに沿った屈曲になることを目視確認する。
+  ```csharp
+  var pc1_mcp = mcpCurve.Evaluate(phase);
+  var pc1_pip = pipCurve.Evaluate(phase);
+
+  mcpAngle = baseMCP + pc1_mcp * mcpScaleDeg;
+  pipAngle = basePIP + pc1_pip * pipScaleDeg;
+  ```
+
+- `baseMCP`, `basePIP`, `mcpScaleDeg`, `pipScaleDeg` などのパラメータは  
+  インスペクタで調整可能であり、実行中に変更して見た目の変化を確認できる。
+
+- DIP 角は PIP 角の一定比率で近似されている：
+
+  ```csharp
+  dipAngle = baseDIP + dipFromPipRatio * (pipAngle - basePIP);
+  ```
+
+- `dipFromPipRatio` を変化させると DIP の曲がりやすさが変わることを確認できる。
+
+### 2.3 SteamVR 手モデルへの適用
+
+- 上記で計算された MCP / PIP / DIP 角度が、  
+  SteamVR 手モデルの該当ボーン（例: `finger_index_0_r`, `finger_index_1_r`, `finger_index_2_r`）に  
+  適切な軸で適用されている。
+
+- `curl=0` 付近では `base*` に近い自然なホームポジション、  
+  `curl=1` 付近ではピアノ演奏の強打鍵に近い指曲げが得られる。
+
+- 既存の `story-hand-curl-tuning-basic.md` の受け入れ条件（  
+  「curl と見た目の対応」「左右の整合性」「ガクつきの少なさ」など）を損なっていない。
+
+### 2.4 視覚的な打鍵シナジーの確認
+
+- `curl` を 0→1 にゆっくり変化させたとき、少なくとも以下が目視で確認できる：
+
+  - MCP が先に大きく曲がり始め、PIP がやや遅れて追従するパターンになっている。  
+  - DIP は PIP に比べて折れすぎず、やや伸び気味に保たれている。
+  - `phase ≒ 0.5`（key press onset 付近）で、指が鍵盤に触れ始める自然な姿勢になっている  
+    （まだ深く握り込んでいない）。
+
+- `mcpScaleDeg`, `pipScaleDeg`, `dipFromPipRatio`, `curl_contact`, `curl_bottom` を調整することで、  
+  `feature/hand-curl-tuning.md` に記載された
+
+  - 「DIP が折れすぎず、やや伸び気味」
+  - 「強打鍵時には MCP が主役、PIP が追従」
+
+  といった要件に近づけられる。
+
+### 2.5 デバッグ・比較手段
+
+- 開発者が「PC1 ベース」と「単純線形」の違いを確認できるよう、  
+  いずれかの方法でモード切り替えが可能になっている（必須ではないが望ましい）：
+
+  - 例: `usePC1Curve` フラグで、  
+    - OFF: `angle = base + curl * maxAngle`（従来の単純モデル）  
+    - ON : `angle = base + pc1(phase) * scaleDeg`（PC1 モデル）  
+    を切り替えられる。
+
+- 少なくとも、`curl`, `phase`, MCP/PIP/DIP 角度、PC1 値（MCP/PIP）が  
+  インスペクタまたはデバッグ UI で確認できる。
 
 ---
 
-## 関連 feature / story
+## 3. 非機能要件
 
-- `feature/hand-curl-tuning.md`
-- `story/hand-curl-tuning-basic.md`
+- PC1 カーブの評価および角度適用が、VR フレームレート（90Hz）で実行しても  
+  パフォーマンス上問題にならない（`AnimationCurve.Evaluate` の呼び出し回数が過剰でない）こと。
+- NaN / 範囲外の `curl` や `phase` に対しても、安全なフォールバック挙動を持つ  
+  （例: 0〜1 にクランプ、角度を基準値に戻す等）。
+
+---
+
+## 4. 関連 feature / story
+
+- feature: `feature/hand-kinematics.md`
+- feature: `feature/hand-curl-tuning.md`
+- story: `story-hand-curl-tuning-basic.md`
+- story: `story-hand-kinematics-pc1-data.md`
