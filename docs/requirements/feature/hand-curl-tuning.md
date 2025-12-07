@@ -24,48 +24,7 @@ PC1 ベースの指モーションモデルそのもの（`curl → phase → PC
 
 ---
 
-## 2. 対象モデルと関節対応
-
-末端（指尖）→ DIP → PIP → MCP → CMC の順。`_l` は左右反転のみ。
-
-| ボーン名                 | 解剖学的部位 / 役割                 |
-|--------------------------|--------------------------------------|
-| finger_thumb_r_end       | 親指 指尖（tip）                    |
-| finger_thumb_2_r         | 親指 IP（PIP/DIP 相当）             |
-| finger_thumb_1_r         | 親指 MCP                             |
-| finger_thumb_0_r         | 親指 CMC                             |
-| finger_index_r_end       | 示指 指尖（tip）                     |
-| finger_index_2_r         | 示指 DIP                              |
-| finger_index_1_r         | 示指 PIP                              |
-| finger_index_0_r         | 示指 MCP                              |
-| finger_index_meta_r      | 示指 CMC                             |
-| finger_middle_r_end      | 中指 指尖（tip）                     |
-| finger_middle_2_r        | 中指 DIP                              |
-| finger_middle_1_r        | 中指 PIP                              |
-| finger_middle_0_r        | 中指 MCP                              |
-| finger_middle_meta_r     | 中指 CMC                             |
-| finger_ring_r_end        | 薬指 指尖（tip）                     |
-| finger_ring_2_r          | 薬指 DIP                              |
-| finger_ring_1_r          | 薬指 PIP                              |
-| finger_ring_0_r          | 薬指 MCP                              |
-| finger_ring_meta_r       | 薬指 CMC                             |
-| finger_pinky_r_end       | 小指 指尖（tip）                     |
-| finger_pinky_2_r         | 小指 DIP                              |
-| finger_pinky_1_r         | 小指 PIP                              |
-| finger_pinky_0_r         | 小指 MCP                              |
-| finger_pinky_meta_r      | 小指 CMC                             |
-
-![alt text](image.png)
-
-補足:
-
-- `_meta` は MCP より手根側の補助ボーン（姿勢/当たり調整用）。  
-  曲げ分配は MCP 相当の `*_0` 以降で行うと解剖学的に近い。  
-- 親指は IP が1関節のみのため、PIP/DIP 相当を `finger_thumb_2_r` にまとめている。
-
----
-
-## 3. 入出力仕様
+## 2. 入出力仕様
 
 ### 3.1 センサ入力（Serial）
 

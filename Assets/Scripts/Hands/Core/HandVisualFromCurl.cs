@@ -25,6 +25,10 @@ public class HandVisualFromCurl : MonoBehaviour
     [Header("Source")]
     public HandCurlTracker curlSource;
 
+    [Header("Kinematics")]
+    [Tooltip("curl（0〜1）から MCP/PIP/DIP の角度を計算するプロファイル。null の場合は従来の線形モデルを使用する。")]
+    public HandKinematicsProfile kinematicsProfile;
+
     [Header("Visual Finger Joints (root -> tip)")]
     public Transform[] thumbJoints;
     public Transform[] indexJoints;
@@ -71,12 +75,12 @@ public class HandVisualFromCurl : MonoBehaviour
         if (curlSource == null || curlSource.curl01 == null || curlSource.curl01.Length < 5)
             return;
 
-        // curl01（0〜1）をそのまま使って各指を回転
-        ApplyFinger(thumbJoints,  0, curlSource.curl01[0], thumbMaxAngle);
-        ApplyFinger(indexJoints,  1, curlSource.curl01[1], indexMaxAngle);
-        ApplyFinger(middleJoints, 2, curlSource.curl01[2], middleMaxAngle);
-        ApplyFinger(ringJoints,   3, curlSource.curl01[3], ringMaxAngle);
-        ApplyFinger(pinkyJoints,  4, curlSource.curl01[4], pinkyMaxAngle);
+        // curl01（0〜1）から各指の角度を計算し、ジョイントに適用する
+        ApplyFingerWithKinematics(HandFinger.Thumb,  0, thumbJoints,  curlSource.curl01[0], thumbMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Index,  1, indexJoints,  curlSource.curl01[1], indexMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Middle, 2, middleJoints, curlSource.curl01[2], middleMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Ring,   3, ringJoints,   curlSource.curl01[3], ringMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Pinky,  4, pinkyJoints,  curlSource.curl01[4], pinkyMaxAngle);
     }
 
     // 今の VisualHand の姿勢を curl=0 の基準として保存
@@ -115,23 +119,51 @@ public class HandVisualFromCurl : MonoBehaviour
         }
     }
 
-    private void ApplyFinger(Transform[] joints, int fingerIndex, float raw, float maxAngle)
+    private void ApplyFingerWithKinematics(HandFinger finger, int fingerIndex, Transform[] joints, float curl, float legacyMaxAngle)
     {
         if (joints == null || joints.Length == 0 || baseRot[fingerIndex] == null)
             return;
 
-        float x = Mathf.Clamp01(raw);
-        float totalAngle = maxAngle * x;
+        float c = Mathf.Clamp01(curl);
 
-        int jointCount = joints.Length;
-        if (jointCount <= 0) return;
+        float mcpDeg;
+        float pipDeg;
+        float dipDeg;
 
-        float perJointAngle = totalAngle / jointCount;
+        if (kinematicsProfile != null)
+        {
+            // プロファイルに角度計算を委譲
+            kinematicsProfile.Evaluate(finger, c, out mcpDeg, out pipDeg, out dipDeg);
+        }
+        else
+        {
+            // プロファイル未設定時は従来の線形モデルと同等の挙動にする
+            float totalAngle = legacyMaxAngle * c;
+            float perJoint = totalAngle / 3f;
+            mcpDeg = perJoint;
+            pipDeg = perJoint;
+            dipDeg = perJoint;
+        }
+
+        // joints 配列の 1,2 を MCP/PIP とみなし、それ以降を DIP とみなす。
+        // 0 番目は CMC / meta など curl では曲げない前提とする。
         for (int i = 0; i < joints.Length; i++)
         {
-            if (joints[i] == null) continue;
+            if (joints[i] == null)
+                continue;
+
+            float angle;
+            if (i == 1)
+                angle = mcpDeg;
+            else if (i == 2)
+                angle = pipDeg;
+            else if (i >= 3)
+                angle = dipDeg;
+            else
+                angle = 0f;
+
             joints[i].localRotation =
-                baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -perJointAngle);
+                baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -angle);
         }
     }
 

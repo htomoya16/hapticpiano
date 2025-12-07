@@ -25,7 +25,48 @@
 
 ---
 
-## 2. PC1 データセットの概要
+## 2. 対象モデルと関節対応
+
+末端（指尖）→ DIP → PIP → MCP → CMC の順。`_l` は左右反転のみ。
+
+| ボーン名                 | 解剖学的部位 / 役割                 |
+|--------------------------|--------------------------------------|
+| finger_thumb_r_end       | 親指 指尖（tip）                    |
+| finger_thumb_2_r         | 親指 IP（PIP/DIP 相当）             |
+| finger_thumb_1_r         | 親指 MCP                             |
+| finger_thumb_0_r         | 親指 CMC                             |
+| finger_index_r_end       | 示指 指尖（tip）                     |
+| finger_index_2_r         | 示指 DIP                              |
+| finger_index_1_r         | 示指 PIP                              |
+| finger_index_0_r         | 示指 MCP                              |
+| finger_index_meta_r      | 示指 CMC                             |
+| finger_middle_r_end      | 中指 指尖（tip）                     |
+| finger_middle_2_r        | 中指 DIP                              |
+| finger_middle_1_r        | 中指 PIP                              |
+| finger_middle_0_r        | 中指 MCP                              |
+| finger_middle_meta_r     | 中指 CMC                             |
+| finger_ring_r_end        | 薬指 指尖（tip）                     |
+| finger_ring_2_r          | 薬指 DIP                              |
+| finger_ring_1_r          | 薬指 PIP                              |
+| finger_ring_0_r          | 薬指 MCP                              |
+| finger_ring_meta_r       | 薬指 CMC                             |
+| finger_pinky_r_end       | 小指 指尖（tip）                     |
+| finger_pinky_2_r         | 小指 DIP                              |
+| finger_pinky_1_r         | 小指 PIP                              |
+| finger_pinky_0_r         | 小指 MCP                              |
+| finger_pinky_meta_r      | 小指 CMC                             |
+
+![alt text](image.png)
+
+補足:
+
+- `_meta` は MCP より手根側の補助ボーン（姿勢/当たり調整用）。  
+  曲げ分配は MCP 相当の `*_0` 以降で行うと解剖学的に近い。  
+- 親指は IP が1関節のみのため、PIP/DIP 相当を `finger_thumb_2_r` にまとめている。
+
+---
+
+## 3. PC1 データセットの概要
 
 WebPlotDigitizer を用いて、Fig.3 の PC1 波形から以下の形式で CSV を抽出した:
 
@@ -50,7 +91,7 @@ WebPlotDigitizer を用いて、Fig.3 の PC1 波形から以下の形式で CSV
 
 ---
 
-## 3. 時間軸の正規化（t → phase）
+## 4. 時間軸の正規化（t → phase）
 
 元 CSV の時間 `t`（−0.2〜+0.2 s）を、次の式で 0〜1 に正規化する:
 
@@ -70,7 +111,7 @@ WebPlotDigitizer を用いて、Fig.3 の PC1 波形から以下の形式で CSV
 
 ---
 
-## 4. AnimationCurve への変換
+## 5. AnimationCurve への変換
 
 正規化後の CSV は次の形式とする:
 
@@ -95,7 +136,7 @@ Unity 側での扱い:
 
 ---
 
-## 5. curl → phase → PC1 → angle 変換パイプライン
+## 6. curl → phase → PC1 → angle 変換パイプライン
 
 ランタイムでは、LucidGloves から得られた **curl 値（0〜1）** を入力とし、  
 以下の変換を行って関節角度を決定する。
@@ -156,7 +197,7 @@ dipAngle = baseDIP + dipFromPipRatio * (pipAngle - basePIP);  // 例: dipFromPip
 
 ---
 
-## 6. なぜ角度を自分で決める必要があるのか
+## 7. なぜ角度を自分で決める必要があるのか
 
 理由は次の通り:
 
@@ -175,7 +216,7 @@ dipAngle = baseDIP + dipFromPipRatio * (pipAngle - basePIP);  // 例: dipFromPip
 
 ---
 
-## 7. 実装ステップ（まとめ）
+## 8. 実装ステップ（まとめ）
 
 PC1 データを HAPTICPIANO に組み込む際の推奨ステップを、story 単位で整理すると次の通りになる。
 

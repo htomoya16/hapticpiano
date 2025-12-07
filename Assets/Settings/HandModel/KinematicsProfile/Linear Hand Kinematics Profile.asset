@@ -9,10 +9,11 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 16a048a8af7da9f43b6d10b1db8ecd4c, type: 3}
-  m_Name: Hand Curl Tracker Preset
+  m_Script: {fileID: 11500000, guid: a2ffb8558b568ba428af2d6d513e04de, type: 3}
+  m_Name: Linear Hand Kinematics Profile
   m_EditorClassIdentifier: 
-  useFiltering: 1
-  filterAlpha: 0.9
-  snapThreshold: 0.35
-  noiseThreshold: 0.008
+  thumbMaxAngle: 220
+  indexMaxAngle: 220
+  middleMaxAngle: 220
+  ringMaxAngle: 220
+  pinkyMaxAngle: 220
