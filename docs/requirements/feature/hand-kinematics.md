@@ -14,7 +14,7 @@
 - 関連要件:
   - feature: `feature/hand-curl-tuning.md`
   - story: `story/hand-kinematics-pc1-data.md`（PC1 データ整備 / AnimationCurve 化）
-  - story: `story/hand-curl-tuning-pc1-curve.md`（PC1 カーブ適用 / ランタイム統合）
+  - story: `story/hand-kinematics-tuning-pc1-curve.md`（PC1 カーブ適用 / ランタイム統合）
 
 本ドキュメントは、`docs/data/` の研究用データと feature/story 要件の **橋渡し** を行う。
 
@@ -185,7 +185,7 @@ PC1 データを HAPTICPIANO に組み込む際の推奨ステップを、story 
 2. 元データの時間 `t` から `phase` を計算し、`phase, pc1` 形式の CSV に変換する。
 3. Unity で `phase, pc1` CSV を読み込み、指・関節ごとの `AnimationCurve` を生成して保存する。
 
-### 7.2 ランタイム統合 / 打鍵シナジー適用（story/hand-curl-tuning-pc1-curve.md）
+### 7.2 ランタイム統合 / 打鍵シナジー適用（story/hand-kinematics-tuning-pc1-curve.md）
 
 1. `curl_contact` / `curl_bottom` を設定し（将来的にはユーザキャリブレーション UI で調整可能にする）、`curl` から `phase` を算出する。
 2. ランタイムで `curl → phase → PC1 → angle` 変換を行い、計算した角度を指ボーンへ適用する。
