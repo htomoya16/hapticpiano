@@ -2,21 +2,14 @@ using UnityEngine;
 using TMPro;
 
 /// <summary>
-/// キーボード操作で開閉できる簡易シリアル設定パネル。
-/// 左右それぞれの HandSerialInput の COM ポート名を
-/// ランタイム中に変更して再接続できる。
+/// COM ポート名をランタイム中に変更するための設定パネルロジック。
+/// ここでは入力と適用のみ扱う。
 /// </summary>
 public class SerialSettingsUI : MonoBehaviour
 {
-    [Header("Toggle")]
-    [Tooltip("このキーを押すと設定パネルの表示/非表示を切り替える")]
-    public KeyCode toggleKey = KeyCode.F1;
-
+    [Header("Panel")]
     [Tooltip("設定パネルのルート GameObject")]
     public GameObject panelRoot;
-
-    [Tooltip("通常時に表示しておくヒント（例: \"Press F1 to open COM settings\"）")]
-    public GameObject hintRoot;
 
     [Header("Targets")]
     [Tooltip("左手側の HandSerialInput")]
@@ -32,18 +25,12 @@ public class SerialSettingsUI : MonoBehaviour
     [Tooltip("右手 COM ポート入力")]
     public TMP_InputField rightPortInput;
 
+    [Header("Behavior")]
+    [Tooltip("Enter キー押下時に Apply を実行する")]
+    public bool applyOnEnter = true;
+
     private void Start()
     {
-        if (panelRoot != null)
-        {
-            panelRoot.SetActive(false); // 最初は閉じておく
-        }
-
-        if (hintRoot != null)
-        {
-            hintRoot.SetActive(true); // 最初はヒントを表示しておく
-        }
-
         // 初期値を UI に反映
         if (leftSerialInput != null && leftPortInput != null)
         {
@@ -58,24 +45,7 @@ public class SerialSettingsUI : MonoBehaviour
 
     private void Update()
     {
-        if (panelRoot == null)
-        {
-            return;
-        }
-
-        // 設定パネルの開閉
-        if (Input.GetKeyDown(toggleKey))
-        {
-            panelRoot.SetActive(!panelRoot.activeSelf);
-        }
-
-        // パネルの表示状態に応じてヒントを ON/OFF
-        if (hintRoot != null)
-        {
-            hintRoot.SetActive(!panelRoot.activeSelf);
-        }
-
-        if (!panelRoot.activeSelf)
+        if (panelRoot == null || !panelRoot.activeSelf)
         {
             return;
         }
@@ -113,19 +83,21 @@ public class SerialSettingsUI : MonoBehaviour
         }
 
         // Enter キーで設定を Apply し、パネルを閉じる
-        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        if (applyOnEnter && (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)))
         {
             // フォーカスに依存せず、両方の入力欄を確認して再接続を試みる
             ApplyLeftPort();
             ApplyRightPort();
-
-            // 入力元に関わらず、Enter が押されたらパネルを閉じる
-            panelRoot.SetActive(false);
-            if (hintRoot != null)
-            {
-                hintRoot.SetActive(true);
-            }
         }
+    }
+
+    /// <summary>
+    /// Apply ボタン用：左右とも適用し、設定に応じてパネルを閉じる。
+    /// </summary>
+    public void ApplyBothPorts()
+    {
+        ApplyLeftPort();
+        ApplyRightPort();
     }
 
     public void ApplyLeftPort()
@@ -147,4 +119,5 @@ public class SerialSettingsUI : MonoBehaviour
 
         rightSerialInput.SetPortNameAndReconnect(rightPortInput.text);
     }
+
 }
