@@ -77,11 +77,15 @@ public class CurlDebugUI : MonoBehaviour
 
         var sb = new System.Text.StringBuilder();
         sb.AppendLine(title);
-        sb.AppendLine("Finger   :   Curl    (FFB)");
-        sb.AppendLine("---------------------------");
+        sb.AppendLine("Finger   :  ADC  cRaw  cFilt (FFB)");
+        sb.AppendLine("----------------------------------");
 
         for (int i = 0; i < 5; i++)
         {
+            float cRaw = (tracker.curlRaw != null && tracker.curlRaw.Length > i)
+                ? tracker.curlRaw[i]
+                : 0f;
+
             float c01 = (tracker.curl01 != null && tracker.curl01.Length > i)
                 ? tracker.curl01[i]
                 : 0f;
@@ -90,12 +94,18 @@ public class CurlDebugUI : MonoBehaviour
                 ? tracker.curlFfb[i]
                 : (short)0;
 
-            // 名前は左詰め8桁、Curl は右詰め7桁、小数3桁、FFB は右詰め4桁
+            int adc = (tracker.sensorRaw != null && tracker.sensorRaw.Length > i)
+                ? tracker.sensorRaw[i]
+                : 0;
+
+            // 名前は左詰め8桁、ADC は右詰め4桁、cRaw/cFilt は右詰め5桁、FFB は右詰め4桁
             string namePart = fingerNames[i].PadRight(8);
-            string curlPart = c01.ToString("F3").PadLeft(7);
+            string adcPart  = adc.ToString().PadLeft(4);
+            string cRawPart = cRaw.ToString("F4").PadLeft(7);
+            string cFiltPart = c01.ToString("F4").PadLeft(7);
             string ffbPart  = cFfb.ToString().PadLeft(4);
 
-            sb.AppendLine($"{namePart}: {curlPart}  ({ffbPart})");
+            sb.AppendLine($"{namePart}: {adcPart} {cRawPart} {cFiltPart} ({ffbPart})");
         }
 
         return sb.ToString();

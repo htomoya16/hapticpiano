@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8c80703e4d843c4190178f8e5e05e5f, type: 3}
+  m_Name: Pc 1 Hand Kinematics Profile
+  m_EditorClassIdentifier: 
+  pc1Curves: {fileID: 11400000, guid: e0ff6bb6fd8a7e048b8c0ac51ff80111, type: 2}
+  thumb:
+    curlContact: 0.153
+    curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
+    baseMcpDeg: 0
+    basePipDeg: 0
+    baseDipDeg: 0
+    mcpScaleDeg: -0.06
+    pipScaleDeg: -0.06
+    dipFromPipRatio: 0.5
+  index:
+    curlContact: 0.211
+    curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
+    baseMcpDeg: 0
+    basePipDeg: 0
+    baseDipDeg: 0
+    mcpScaleDeg: -0.03
+    pipScaleDeg: -0.03
+    dipFromPipRatio: 0.5
+  middle:
+    curlContact: 0.25
+    curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
+    baseMcpDeg: 0
+    basePipDeg: 0
+    baseDipDeg: 0
+    mcpScaleDeg: -0.03
+    pipScaleDeg: -0.03
+    dipFromPipRatio: 0.5
+  ring:
+    curlContact: 0.25
+    curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
+    baseMcpDeg: 0
+    basePipDeg: 0
+    baseDipDeg: 0
+    mcpScaleDeg: -0.03
+    pipScaleDeg: -0.03
+    dipFromPipRatio: 0.5
+  pinky:
+    curlContact: 0.197
+    curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
+    baseMcpDeg: 0
+    basePipDeg: 0
+    baseDipDeg: 0
+    mcpScaleDeg: -0.03
+    pipScaleDeg: -0.03
+    dipFromPipRatio: 0.5
+  directionAccumulationThreshold: 0.167
+  directionAccumulationDecay: 0.537

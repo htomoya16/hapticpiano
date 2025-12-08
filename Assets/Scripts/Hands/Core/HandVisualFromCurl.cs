@@ -1,24 +1,33 @@
 using System.Collections;
 using UnityEngine;
-using Valve.VR;
+
+/// <summary>
+/// HandVisualFromCurl で共有するパラメータプリセット。
+/// （HandCurlTracker は生値を渡す前提のため、主にビジュアル用）
+/// </summary>
+[CreateAssetMenu(menuName = "HapticPiano/HandModelPreset")]
+public class HandModelPreset : ScriptableObject
+{
+    [Header("Visual Angles (deg)")]
+    public float thumbMaxAngle = 220f;
+    public float indexMaxAngle = 220f;
+    public float middleMaxAngle = 220f;
+    public float ringMaxAngle = 220f;
+    public float pinkyMaxAngle = 220f;
+}
 
 // HandVisualFromCurl は、HandCurlTracker の curl 値に基づいて
 // 手のモデルの指の関節を回転させるコンポーネントである。
+// - curl=0 のとき、Prefab / シーン上のポーズをそのまま再現
+// - curl=1 のとき、MaxAngle まで曲げる
 public class HandVisualFromCurl : MonoBehaviour
 {
     [Header("Source")]
-
     public HandCurlTracker curlSource;
 
-    [Header("Skeleton Finger Joints (root -> tip)")]
-    // SensorHand_Right/Left の SteamVR_Behaviour_Skeleton 側のボーンを対応させる
-    public Transform[] skeletonThumbJoints;
-    public Transform[] skeletonIndexJoints;
-    public Transform[] skeletonMiddleJoints;
-    public Transform[] skeletonRingJoints;
-    public Transform[] skeletonPinkyJoints;
-
-   // Right/Left Hand に付いている HandCurlTracker
+    [Header("Kinematics")]
+    [Tooltip("curl（0〜1）から MCP/PIP/DIP の角度を計算するプロファイル。null の場合は従来の線形モデルを使用する。")]
+    public HandKinematicsProfile kinematicsProfile;
 
     [Header("Visual Finger Joints (root -> tip)")]
     public Transform[] thumbJoints;
@@ -28,112 +37,54 @@ public class HandVisualFromCurl : MonoBehaviour
     public Transform[] pinkyJoints;
 
     [Header("Max curl angle (deg)")]
-    public float thumbMaxAngle  = 45f;
-    public float indexMaxAngle  = 70f;
-    public float middleMaxAngle = 70f;
-    public float ringMaxAngle   = 70f;
-    public float pinkyMaxAngle  = 70f;
-
-    [Header("Curve / Deadzone")]
-    [Range(0f, 0.5f)]
-    public float deadZone = 0.05f;
-    [Range(0.5f, 3f)]
-    public float gamma = 1.2f;
+    public float thumbMaxAngle  = 220f;
+    public float indexMaxAngle  = 220f;
+    public float middleMaxAngle = 220f;
+    public float ringMaxAngle   = 220f;
+    public float pinkyMaxAngle  = 220f;
 
     [Header("Preset (optional)")]
-    [Tooltip("左右で共通化するパラメータプリセット")]
+    [Tooltip("左右で共通化するパラメータプリセット（config.toml に対応）")]
     public HandModelPreset preset;
     public bool applyPresetOnStart = true;
 
-    [Header("Calibration (UI trigger)")]
-    [Tooltip("ワールド空間 UI のボタンから呼び出す。ログが不要ならオフ。")]
-    public bool logCalibrateFailure = true;
-
     // [finger][joint] の基準回転（curl=0 のときの姿勢）
-    private Quaternion[][] baseRot = new Quaternion[5][];
-    private bool basePoseCaptured = false;
+    private readonly Quaternion[][] baseRot = new Quaternion[5][];
+    private bool basePoseCaptured;
 
-    [Header("Calibration")]
-    [Tooltip("起動時に数フレーム待って Skeleton から基準ポーズを取る")]
-    public bool autoCalibrateOnStart = true;
-    public int waitFramesBeforeCalib = 10; // 起動後何フレーム待つか
+    // 前フレームの curl 値（0〜1）を保持し、PC1 プロファイル側で
+    // 「閉じ動作か／開き動作か」を判定するために使用する。
+    private readonly float[] previousCurl = new float[5];
 
-    private void Awake()
+    private void Start()
     {
-        // 何もしない。実際のキャリブレーションは Start コルーチンでやる
-    }
-
-    private IEnumerator Start()
-    {
-        // プリセット適用（左右整合を取りやすくする）
-        if (applyPresetOnStart && preset != null)
+        // config.toml 由来の HandModelPreset を一度だけ適用
+        if (preset != null && applyPresetOnStart)
         {
             ApplyPreset(preset);
-            // curlSource 側にも共有値を反映
-            if (curlSource != null)
-            {
-                curlSource.ApplyPreset(preset);
-            }
         }
 
-        if (!autoCalibrateOnStart)
-            yield break;
-
-        // SteamVR_Behaviour_Skeleton が姿勢を更新し終わるまで少し待つ
-        for (int i = 0; i < waitFramesBeforeCalib; i++)
+        // Prefab / シーン上のポーズをそのまま curl=0 の基準姿勢として保存
+        basePoseCaptured = CaptureBasePose();
+        if (!basePoseCaptured)
         {
-            yield return null;
+            Debug.LogWarning("[HandVisualFromCurl] Base pose capture failed. 指ジョイント配列を確認してください。", this);
         }
-
-        // 起動時に自動キャリブレーション
-        CalibrateFromSkeleton();
-    }
-
-    /// <summary>
-    /// 現在の Skeleton 参照ポーズを使って、curl=0 の基準姿勢を取り直す
-    /// （ボタン入力などから呼び出す用）
-    /// </summary>
-    public bool CalibrateFromSkeleton()
-    {
-        // このタイミングで「手を伸ばした状態」にしておく想定
-        CopyPoseFromSkeletonToVisual(thumbJoints,  skeletonThumbJoints);
-        CopyPoseFromSkeletonToVisual(indexJoints,  skeletonIndexJoints);
-        CopyPoseFromSkeletonToVisual(middleJoints, skeletonMiddleJoints);
-        CopyPoseFromSkeletonToVisual(ringJoints,   skeletonRingJoints);
-        CopyPoseFromSkeletonToVisual(pinkyJoints,  skeletonPinkyJoints);
-
-        bool success = CaptureBasePose();
-        basePoseCaptured = success;
-        return success;
     }
 
     private void LateUpdate()
     {
+        if (!basePoseCaptured)
+            return;
         if (curlSource == null || curlSource.curl01 == null || curlSource.curl01.Length < 5)
             return;
 
-        // まだ基準ポーズが取れていないなら何もしない（Start のコルーチン待ち）
-        if (!basePoseCaptured)
-            return;
-
-        ApplyFinger(thumbJoints,  0, curlSource.curl01[0], thumbMaxAngle);
-        ApplyFinger(indexJoints,  1, curlSource.curl01[1], indexMaxAngle);
-        ApplyFinger(middleJoints, 2, curlSource.curl01[2], middleMaxAngle);
-        ApplyFinger(ringJoints,   3, curlSource.curl01[3], ringMaxAngle);
-        ApplyFinger(pinkyJoints,  4, curlSource.curl01[4], pinkyMaxAngle);
-    }
-
-    // Skeleton 側の joint 配列から Visual 側の joint 配列に localRotation をコピーする
-    private void CopyPoseFromSkeletonToVisual(Transform[] visual, Transform[] skeleton)
-    {
-        if (visual == null || skeleton == null) return;
-
-        int count = Mathf.Min(visual.Length, skeleton.Length);
-        for (int i = 0; i < count; i++)
-        {
-            if (visual[i] == null || skeleton[i] == null) continue;
-            visual[i].localRotation = skeleton[i].localRotation;
-        }
+        // curl01（0〜1）から各指の角度を計算し、ジョイントに適用する
+        ApplyFingerWithKinematics(HandFinger.Thumb,  0, thumbJoints,  curlSource.curl01[0], thumbMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Index,  1, indexJoints,  curlSource.curl01[1], indexMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Middle, 2, middleJoints, curlSource.curl01[2], middleMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Ring,   3, ringJoints,   curlSource.curl01[3], ringMaxAngle);
+        ApplyFingerWithKinematics(HandFinger.Pinky,  4, pinkyJoints,  curlSource.curl01[4], pinkyMaxAngle);
     }
 
     // 今の VisualHand の姿勢を curl=0 の基準として保存
@@ -144,8 +95,13 @@ public class HandVisualFromCurl : MonoBehaviour
         InitFingerBaseRot(2, middleJoints);
         InitFingerBaseRot(3, ringJoints);
         InitFingerBaseRot(4, pinkyJoints);
+
         // いずれかの指が未設定の場合 false を返す
-        return baseRot[0] != null && baseRot[1] != null && baseRot[2] != null && baseRot[3] != null && baseRot[4] != null;
+        return baseRot[0] != null &&
+               baseRot[1] != null &&
+               baseRot[2] != null &&
+               baseRot[3] != null &&
+               baseRot[4] != null;
     }
 
     private void InitFingerBaseRot(int fingerIndex, Transform[] joints)
@@ -160,59 +116,73 @@ public class HandVisualFromCurl : MonoBehaviour
         for (int i = 0; i < joints.Length; i++)
         {
             if (joints[i] != null)
+            {
+                // Prefab / 現在の VisualHand の localRotation をそのまま基準姿勢として保存
                 baseRot[fingerIndex][i] = joints[i].localRotation;
+            }
         }
     }
 
-    private void ApplyFinger(Transform[] joints, int fingerIndex, float raw, float maxAngle)
+    private void ApplyFingerWithKinematics(HandFinger finger, int fingerIndex, Transform[] joints, float curl, float legacyMaxAngle)
     {
         if (joints == null || joints.Length == 0 || baseRot[fingerIndex] == null)
             return;
 
-        float x = Mathf.Clamp01(raw);
+        float c = Mathf.Clamp01(curl);
+        float prev = Mathf.Clamp01(previousCurl[fingerIndex]);
 
-        // デッドゾーン
-        if (x < deadZone)
-            x = 0f;
+        float mcpDeg;
+        float pipDeg;
+        float dipDeg;
+
+        if (kinematicsProfile != null)
+        {
+            // プロファイルに角度計算を委譲
+            kinematicsProfile.Evaluate(finger, c, prev, out mcpDeg, out pipDeg, out dipDeg);
+        }
         else
-            x = (x - deadZone) / (1f - deadZone);
+        {
+            // プロファイル未設定時は従来の線形モデルと同等の挙動にする
+            float totalAngle = legacyMaxAngle * c;
+            float perJoint = totalAngle / 3f;
+            mcpDeg = perJoint;
+            pipDeg = perJoint;
+            dipDeg = perJoint;
+        }
 
-        // カーブ
-        x = Mathf.Pow(x, gamma);
-
-        float totalAngle = maxAngle * x;
-        float perJointAngle = totalAngle / joints.Length;
-
+        // joints 配列の 1,2 を MCP/PIP とみなし、それ以降を DIP とみなす。
+        // 0 番目は CMC / meta など curl では曲げない前提とする。
         for (int i = 0; i < joints.Length; i++)
         {
-            if (joints[i] == null) continue;
-            joints[i].localRotation =
-                baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -perJointAngle);
-        }
-    }
+            if (joints[i] == null)
+                continue;
 
-    /// <summary>
-    /// ワールド空間 UI のボタン OnClick に紐付けて呼び出す。
-    /// 左手ボタンは左手オブジェクトのこのメソッド、右手ボタンは右手オブジェクトのこのメソッドを指定する。
-    /// </summary>
-    public void RecalibrateFromUIButton()
-    {
-        bool ok = CalibrateFromSkeleton();
-        if (!ok && logCalibrateFailure)
-        {
-            Debug.LogWarning("[HandVisualFromCurl] 再キャリブレーション失敗。Skeleton 参照を確認してください。");
+            float angle;
+            if (i == 1)
+                angle = mcpDeg;
+            else if (i == 2)
+                angle = pipDeg;
+            else if (i >= 3)
+                angle = dipDeg;
+            else
+                angle = 0f;
+
+            joints[i].localRotation =
+                baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -angle);
         }
+
+        // このフレームの curl を保存しておき、次フレームの previousCurl として利用する。
+        previousCurl[fingerIndex] = c;
     }
 
     private void ApplyPreset(HandModelPreset p)
     {
         if (p == null) return;
+
         thumbMaxAngle  = p.thumbMaxAngle;
         indexMaxAngle  = p.indexMaxAngle;
         middleMaxAngle = p.middleMaxAngle;
         ringMaxAngle   = p.ringMaxAngle;
         pinkyMaxAngle  = p.pinkyMaxAngle;
-        deadZone = p.visualDeadZone;
-        gamma = p.visualGamma;
     }
 }
