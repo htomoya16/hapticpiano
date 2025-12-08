@@ -18,6 +18,14 @@
 
 本ドキュメントは、`docs/data/` の研究用データと feature/story 要件の **橋渡し** を行う。
 
+> **研究との関係についての注意**  
+> 以降に記載する `curl → phase → PC1 → angle` や `Pc1HandKinematicsProfile` の仕様は、  
+> HAPTICPIANO 内で「打鍵らしい見た目・体験」を得るための **実装上のモデル** であり、  
+> 論文の PC1 を時間軸ごと厳密に再現すること、あるいは研究評価に直接用いることを目的としない。  
+> 実際のユーザスタディ・評価実験など **研究目的の計測系では、等分モデル（`LinearHandKinematicsProfile`）を正準とし、PC1 モデルは使用しない。**  
+> PC1 はあくまで運動パターンの「参考シェイプ」として利用し、  
+> 実際の挙動は XR 実装上の都合（ノイズ・遅延・チューニング容易性など）を優先してよい。
+
 実務上は、PC1 モデルの導入を次の 2 段階の story に分割して進める:
 
 - データ整備側: PC1 生データを `phase, pc1` 形式に正規化し、`AnimationCurve` として利用可能にする（`story/hand-kinematics-pc1-data.md`）。
@@ -151,19 +159,43 @@ curl_contact : 接触と見なす curl（例: 0.2〜0.3）
 curl_bottom  : 底つきと見なす curl（例: 0.8〜0.9）
 ```
 
-### 5.2 curl → phase 変換
+### 5.2 curl → phase 変換（閉じ 0〜0.5 / 開き 0.5〜1）
 
-上記 2 点をもとに、curl 値を 0〜1 の `phase` に線形マッピングする:
+PC1 データ自体は `phase = 0〜1` 全体で「打鍵〜離鍵」を表すが、  
+ランタイム実装では次のように **“閉じる動きで前半（0〜0.5）／開く動きで後半（0.5〜1）”** を使う:
 
 ```csharp
-if (curl <= curl_contact)      phase = 0f;
-else if (curl >= curl_bottom)  phase = 1f;
-else                            phase = Mathf.InverseLerp(curl_contact, curl_bottom, curl);
+// c      : 現フレームの curl（0〜1）
+// prev   : 前フレームの curl（0〜1）
+// isClosing = true なら「指を閉じている最中」
+bool isClosing = c >= prev;
+
+if (isClosing)
+{
+    // 閉じる動き: curl_contact〜curl_bottom を phase 0〜0.5 に対応
+    if (c <= curl_contact)      phase = 0f;
+    else if (c >= curl_bottom)  phase = 0.5f;
+    else
+    {
+        float u = Mathf.InverseLerp(curl_contact, curl_bottom, c); // 0〜1
+        phase = Mathf.Lerp(0f, 0.5f, u);
+    }
+}
+else
+{
+    // 開く動き: curl_bottom〜curl_contact を phase 0.5〜1 に対応
+    if (c >= curl_bottom)       phase = 0.5f;
+    else if (c <= curl_contact) phase = 1f;
+    else
+    {
+        float u = Mathf.InverseLerp(curl_bottom, curl_contact, c); // 0〜1
+        phase = Mathf.Lerp(0.5f, 1f, u);
+    }
+}
 ```
 
-- `phase = 0` : 打鍵前（まだ鍵盤に触れていない）
-- `phase = 1` : 底つき付近（最大打鍵）
-- `phase ≒ 0.5` : キーが沈み始める付近（finger–key contact の近似）
+- `phase = 0〜0.5` : 指を閉じていく打鍵フェーズ（PC1 前半を使用）
+- `phase = 0.5〜1` : 指を開いていく戻りフェーズ（PC1 後半を使用）
 
 ### 5.3 phase → PC1 値取得
 

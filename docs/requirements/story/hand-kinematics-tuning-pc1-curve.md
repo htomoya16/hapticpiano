@@ -4,6 +4,11 @@
 MCP / PIP / DIP 角度を決定し、SteamVR 手モデルに適用することで、  
 **ピアノ打鍵らしい指関節シナジー** を実現するための最小セットを定義する。
 
+> **研究との関係について**  
+> 本 story で扱う PC1 ベースの運動学は、論文の PC1 を時間軸ごと厳密に再現するためのものではなく、  
+> あくまで「PC1 由来のシェイプを参考にした XR 実装用モーション」のチューニングを目的とする。  
+> 研究評価や統計解析など **実際の研究用途では、LinearHandKinematicsProfile を用いた等分モデルを使用し、PC1 モデルは使用しない。**
+
 ---
 
 ## 1. この story の目的
@@ -19,22 +24,47 @@ MCP / PIP / DIP 角度を決定し、SteamVR 手モデルに適用すること�
 
 ## 2. 受け入れ条件（完了判定）
 
-### 2.1 curl → phase 変換の実装
+### 2.1 curl → phase 変換の実装（閉じ 0〜0.5 / 開き 0.5〜1）
 
 - 少なくとも 1 本の指（推奨: index）について、  
   以下のロジックで `curl`（0〜1）から `phase`（0〜1）が算出されている：
 
   ```csharp
-  if (curl <= curl_contact)      phase = 0f;
-  else if (curl >= curl_bottom)  phase = 1f;
-  else                            phase = Mathf.InverseLerp(curl_contact, curl_bottom, curl);
+  float c      = Mathf.Clamp01(curl);
+  float prev   = Mathf.Clamp01(previousCurl);
+  bool isClosing = c >= prev;   // true: 指を閉じている, false: 指を開いている
+
+  if (isClosing)
+  {
+      // 閉じる動き: curl_contact〜curl_bottom を phase 0〜0.5 に対応
+      if (c <= curl_contact)      phase = 0f;
+      else if (c >= curl_bottom)  phase = 0.5f;
+      else
+      {
+          float u = Mathf.InverseLerp(curl_contact, curl_bottom, c); // 0〜1
+          phase = Mathf.Lerp(0f, 0.5f, u);
+      }
+  }
+  else
+  {
+      // 開く動き: curl_bottom〜curl_contact を phase 0.5〜1 に対応
+      if (c >= curl_bottom)       phase = 0.5f;
+      else if (c <= curl_contact) phase = 1f;
+      else
+      {
+          float u = Mathf.InverseLerp(curl_bottom, curl_contact, c); // 0〜1
+          phase = Mathf.Lerp(0.5f, 1f, u);
+      }
+  }
   ```
 
 - `curl_contact` と `curl_bottom` はインスペクタから調整可能であり、  
   例えば `curl_contact = 0.2〜0.3`, `curl_bottom = 0.8〜0.9` 程度を初期値とする。
 
-- デバッグ UI などで、`curl` を 0→1 にスライダー操作したとき、  
-  `phase` が 0→1 に単調増加していることが確認できる。
+- デバッグ UI などで、`curl` を 0→1→0 とゆっくり往復させたとき、
+  - 閉じていく区間では `phase` が 0→0.5
+  - 開いていく区間では `phase` が 0.5→1  
+  と遷移していることが確認できる。
 
 ### 2.2 phase → PC1 → angle 変換の実装
 

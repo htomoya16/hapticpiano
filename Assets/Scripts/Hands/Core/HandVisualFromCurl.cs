@@ -52,6 +52,10 @@ public class HandVisualFromCurl : MonoBehaviour
     private readonly Quaternion[][] baseRot = new Quaternion[5][];
     private bool basePoseCaptured;
 
+    // 前フレームの curl 値（0〜1）を保持し、PC1 プロファイル側で
+    // 「閉じ動作か／開き動作か」を判定するために使用する。
+    private readonly float[] previousCurl = new float[5];
+
     private void Start()
     {
         // config.toml 由来の HandModelPreset を一度だけ適用
@@ -125,6 +129,7 @@ public class HandVisualFromCurl : MonoBehaviour
             return;
 
         float c = Mathf.Clamp01(curl);
+        float prev = Mathf.Clamp01(previousCurl[fingerIndex]);
 
         float mcpDeg;
         float pipDeg;
@@ -133,7 +138,7 @@ public class HandVisualFromCurl : MonoBehaviour
         if (kinematicsProfile != null)
         {
             // プロファイルに角度計算を委譲
-            kinematicsProfile.Evaluate(finger, c, out mcpDeg, out pipDeg, out dipDeg);
+            kinematicsProfile.Evaluate(finger, c, prev, out mcpDeg, out pipDeg, out dipDeg);
         }
         else
         {
@@ -165,6 +170,9 @@ public class HandVisualFromCurl : MonoBehaviour
             joints[i].localRotation =
                 baseRot[fingerIndex][i] * Quaternion.Euler(0f, 0f, -angle);
         }
+
+        // このフレームの curl を保存しておき、次フレームの previousCurl として利用する。
+        previousCurl[fingerIndex] = c;
     }
 
     private void ApplyPreset(HandModelPreset p)

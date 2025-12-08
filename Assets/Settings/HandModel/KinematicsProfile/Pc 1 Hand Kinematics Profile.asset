@@ -14,17 +14,25 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   pc1Curves: {fileID: 11400000, guid: e0ff6bb6fd8a7e048b8c0ac51ff80111, type: 2}
   thumb:
-    curlContact: 0.25
+    curlContact: 0.153
     curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
     baseMcpDeg: 0
     basePipDeg: 0
     baseDipDeg: 0
-    mcpScaleDeg: -0.03
-    pipScaleDeg: -0.03
+    mcpScaleDeg: -0.06
+    pipScaleDeg: -0.06
     dipFromPipRatio: 0.5
   index:
-    curlContact: 0.4
+    curlContact: 0.211
     curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
     baseMcpDeg: 0
     basePipDeg: 0
     baseDipDeg: 0
@@ -34,6 +42,10 @@ MonoBehaviour:
   middle:
     curlContact: 0.25
     curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
     baseMcpDeg: 0
     basePipDeg: 0
     baseDipDeg: 0
@@ -43,6 +55,10 @@ MonoBehaviour:
   ring:
     curlContact: 0.25
     curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
     baseMcpDeg: 0
     basePipDeg: 0
     baseDipDeg: 0
@@ -52,9 +68,15 @@ MonoBehaviour:
   pinky:
     curlContact: 0.197
     curlBottom: 0.85
+    closingPhaseMin: 0
+    closingPhaseMax: 0.5
+    openingPhaseMin: 0.5
+    openingPhaseMax: 1
     baseMcpDeg: 0
     basePipDeg: 0
     baseDipDeg: 0
-    mcpScaleDeg: 0.03
-    pipScaleDeg: 0.03
+    mcpScaleDeg: -0.03
+    pipScaleDeg: -0.03
     dipFromPipRatio: 0.5
+  directionAccumulationThreshold: 0.167
+  directionAccumulationDecay: 0.537

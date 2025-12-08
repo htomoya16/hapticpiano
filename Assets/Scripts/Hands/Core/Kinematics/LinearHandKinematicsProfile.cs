@@ -18,6 +18,7 @@ public class LinearHandKinematicsProfile : HandKinematicsProfile
     public override void Evaluate(
         HandFinger finger,
         float curl,
+        float previousCurl, // Linear モデルでは未使用だが、インタフェース整合のため受け取る
         out float mcpDeg,
         out float pipDeg,
         out float dipDeg)
@@ -47,4 +48,3 @@ public class LinearHandKinematicsProfile : HandKinematicsProfile
         }
     }
 }
-
