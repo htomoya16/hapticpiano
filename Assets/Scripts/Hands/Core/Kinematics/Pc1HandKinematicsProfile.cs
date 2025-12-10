@@ -1,4 +1,6 @@
 using UnityEngine;
+//中止
+
 
 /// <summary>
 /// PC1 カーブを用いた指関節シナジーモデル。

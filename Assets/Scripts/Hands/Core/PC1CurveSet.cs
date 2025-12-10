@@ -1,4 +1,6 @@
 using UnityEngine;
+//中止
+
 
 [CreateAssetMenu(fileName = "PC1CurveSet", menuName = "HapticPiano/PC1 Curve Set")]
 public class PC1CurveSet : ScriptableObject

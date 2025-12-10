@@ -12,11 +12,11 @@ public class SerialSettingsUI : MonoBehaviour
     public GameObject panelRoot;
 
     [Header("Targets")]
-    [Tooltip("左手側の HandSerialInput")]
-    public HandSerialInput leftSerialInput;
+    [Tooltip("左手側の HandSensorReceiver")]
+    public HandSensorReceiver leftReceiver;
 
-    [Tooltip("右手側の HandSerialInput")]
-    public HandSerialInput rightSerialInput;
+    [Tooltip("右手側の HandSensorReceiver")]
+    public HandSensorReceiver rightReceiver;
 
     [Header("UI")]
     [Tooltip("左手 COM ポート入力")]
@@ -32,14 +32,14 @@ public class SerialSettingsUI : MonoBehaviour
     private void Start()
     {
         // 初期値を UI に反映
-        if (leftSerialInput != null && leftPortInput != null)
+        if (leftReceiver != null && leftPortInput != null)
         {
-            leftPortInput.text = leftSerialInput.portName;
+            leftPortInput.text = leftReceiver.portName;
         }
 
-        if (rightSerialInput != null && rightPortInput != null)
+        if (rightReceiver != null && rightPortInput != null)
         {
-            rightPortInput.text = rightSerialInput.portName;
+            rightPortInput.text = rightReceiver.portName;
         }
     }
 
@@ -102,22 +102,22 @@ public class SerialSettingsUI : MonoBehaviour
 
     public void ApplyLeftPort()
     {
-        if (leftSerialInput == null || leftPortInput == null)
+        if (leftReceiver == null || leftPortInput == null)
         {
             return;
         }
 
-        leftSerialInput.SetPortNameAndReconnect(leftPortInput.text);
+        leftReceiver.SetPortNameAndReconnect(leftPortInput.text);
     }
 
     public void ApplyRightPort()
     {
-        if (rightSerialInput == null || rightPortInput == null)
+        if (rightReceiver == null || rightPortInput == null)
         {
             return;
         }
 
-        rightSerialInput.SetPortNameAndReconnect(rightPortInput.text);
+        rightReceiver.SetPortNameAndReconnect(rightPortInput.text);
     }
 
 }

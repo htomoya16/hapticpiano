@@ -86,7 +86,7 @@ PC1 ベースの指モーションモデルそのもの（`curl → phase → PC
 * Unity 側では以下の挙動を行うこと:
   * `K` を含むフレームでは `sensorRaw` を更新せず、直前フレームの値を保持する（= 指の curl を凍結）。
   * 同時に、VR 上の手の Transform を固定し、実際の手を動かしても VR 手が追従しない状態にする。  
-    （例: `HandFreezeOnCalibrate` のようなコンポーネントで、`HandSerialInput.isCalibrating` を監視して手の位置・向きを固定する）
+    （例: `HandFreezeOnCalibrate` のようなコンポーネントで、`HandSensorReceiver.isCalibrating` を監視して手の位置・向きを固定する）
 * `K` を含まないフレームに戻った時点で、通常の追従動作（センサ値更新 + Transform 更新）に復帰する。
 
 ---

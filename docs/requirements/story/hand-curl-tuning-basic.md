@@ -18,10 +18,10 @@ VR 上の手の見た目と実際の手の動きが大きく破綻しないこ�
   - C → 中指 (middle)
   - D → 薬指 (ring)
   - E → 小指 (pinky)
-  - （オプション）K → キャリブレーション中フラグ
+  - K → キャリブレーション中フラグ（行末または行内に付与される）
 
 - デバッグ UI やログなどで、各フレームの生値 `sensorRaw[0..4]` が確認できる。
-- `K` を含む行を受信しているかどうかを Unity 側で判定できる（例: `HandSerialInput.isCalibrating`）。
+- `K` を含む行を受信しているかどうかを Unity 側で判定できる（例: `HandSensorReceiver.isCalibrating`）。
 
 ### 2. curl 正規化の挙動
 
@@ -51,18 +51,18 @@ VR 上の手の見た目と実際の手の動きが大きく破綻しないこ�
 
 - ESP 側でセンサキャリブレーションを行う際、`K` フラグ付きのシリアル文字列を送信する。
 
-  - 例: `A123B456C789D012E345K`
+  - 例: `A123B456C789D012E345K`（A～E の 5 チャンネル + 任意位置の K）
 
 - Unity 側では、以下の挙動が確認できること:
 
   1. `K` フラグ受信中:
 
-     - `HandSerialInput` が受信行内の `K` を検知するとき、
+     - 受信コンポーネント（HandSensorReceiver）が受信行内の `K` を検知するとき、
        - `isCalibrating = true` になる。
        - その間は `HandCurlTracker.UpdateSensorFromEncodedString(...)` を呼ばず、
          `sensorRaw` / `curl01` は前フレームの値を保持する（指の動きが凍結する）。
      - `HandFreezeOnCalibrate` などのコンポーネントが
-       `HandSerialInput.isCalibrating` を監視し、
+       `HandSensorReceiver.isCalibrating` を監視し、
        - 立ち上がり時に手の位置・向きを保存
        - `isCalibrating == true` の間は手の Transform を保存値に固定  
        → VR 上の手が空間的にも完全に止まって見える。
