@@ -8,6 +8,9 @@ using System.Text.RegularExpressions;
 /// </summary>
 public static class SerialPacketCodec
 {
+    private const int SensorRawMax = 4095;
+    private const int ServoMax = 1000;
+
     // A####B####C####D####E#### （#### は1〜4桁、先頭に余計な文字があってもよい）
     private static readonly Regex Pattern = new Regex(@"A(\d{1,4})B(\d{1,4})C(\d{1,4})D(\d{1,4})E(\d{1,4})", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
@@ -17,6 +20,10 @@ public static class SerialPacketCodec
         return $"A{ClampPad(values[0])}B{ClampPad(values[1])}C{ClampPad(values[2])}D{ClampPad(values[3])}E{ClampPad(values[4])}";
     }
 
+    /// <summary>
+    /// センサ入力（sensorRaw）用途のデコード。
+    /// LucidGloves 側は 0〜4095 を想定するため、0〜4095 にクランプする。
+    /// </summary>
     public static bool TryDecode(string line, out int[] values)
     {
         values = null;
@@ -33,14 +40,15 @@ public static class SerialPacketCodec
                 values = null;
                 return false;
             }
-            values[i] = parsed < 0 ? 0 : (parsed > 1000 ? 1000 : parsed);
+            values[i] = parsed < 0 ? 0 : (parsed > SensorRawMax ? SensorRawMax : parsed);
         }
         return true;
     }
 
     private static string ClampPad(int v)
     {
-        int clamped = v < 0 ? 0 : (v > 1000 ? 1000 : v);
+        // サーボ出力用途（0〜1000）。
+        int clamped = v < 0 ? 0 : (v > ServoMax ? ServoMax : v);
         return clamped.ToString("D4");
     }
 }

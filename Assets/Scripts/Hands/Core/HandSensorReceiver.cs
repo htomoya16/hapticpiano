@@ -2,7 +2,7 @@ using UnityEngine;
 
 /// <summary>
 /// シリアルから受信した 1 行のセンサ文字列を HandCurlTracker に渡す受信専用コンポーネント。
-/// SerialPortAdapter を共有して利用し、フォーマット検証は HapticFormat に委譲する。
+/// SerialPortAdapter を共有して利用し、フォーマットのデコード/検証は SerialPacketCodec に委譲する。
 /// </summary>
 public class HandSensorReceiver : MonoBehaviour
 {
@@ -62,8 +62,8 @@ public class HandSensorReceiver : MonoBehaviour
         isCalibrating = hasK;
         if (hasK) return; // キャリブレーション中は更新しない
 
-        // フォーマット検証（A####B####C####D####E####）
-        if (!SerialPacketCodec.TryDecode(_latestLine, out _))
+        // デコード（A####B####C####D####E####）
+        if (!SerialPacketCodec.TryDecode(_latestLine, out int[] decoded))
         {
             if (logErrors)
             {
@@ -72,8 +72,8 @@ public class HandSensorReceiver : MonoBehaviour
             return;
         }
 
-        // HandCurlTracker へ渡す（既存メソッドを利用）
-        targetTracker.UpdateSensorFromEncodedString(_latestLine);
+        // HandCurlTracker へ渡す（デコード済み値をコピー）
+        targetTracker.UpdateSensorFromDecodedValues(decoded);
     }
 
     /// <summary>

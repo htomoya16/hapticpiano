@@ -3,9 +3,10 @@ using UnityEngine;
 
 /// <summary>
 /// キャリブレーション（現行）:
-/// - 「軽く握ってください」「キャリブレーション中は指の力を抜いてください」を案内し、10 秒カウントダウン
-/// - 親指→人差し指→中指→薬指→小指の順に、対象指のみを 0→1000 へ段階的に動かす
-/// - 指ごとに sensorRaw が基準レンジから外れた瞬間の 1 ステップ前のサーボ値を保存する
+/// - 「キャリブレーション中は軽く握った状態を維持してください」を案内し、開始前にカウントダウンする
+/// - 全指を同時に 0→1000 へ段階的に動かす（未確定の指のみ）
+/// - 指ごとに sensorRaw が基準レンジ（±許容）から外れた瞬間の 1 ステップ前のサーボ値を released として保存する
+/// - 指が確定したら、その指は即座に released を送って固定し、残り指のキャリブレーションを継続する
 /// </summary>
 [DisallowMultipleComponent]
 public class HapticGripCalibrationController : MonoBehaviour
@@ -47,8 +48,11 @@ public class HapticGripCalibrationController : MonoBehaviour
     [Tooltip("開始前の案内カウントダウン秒数（10,9,...,1）。0 以下で無効。")]
     public int initialCountdownSeconds = 10;
 
-    [Tooltip("各指開始前のカウントダウン秒数（3,2,1）。0 以下で無効。")]
-    public int perFingerCountdownSeconds = 3;
+    [Tooltip("開始時にキャリブレーション状態をリセットする（2回目以降の再キャリブ用）。")]
+    public bool resetStateOnStart = true;
+
+    [Tooltip("保存する released 値に加算するオフセット（+で 1000 側＝張る方向、-で 0 側＝ゆるむ方向）。保存時に 0-1000 にクランプされる。")]
+    public int releasedValueOffset = 0;
 
     [Tooltip("スイープで変化が検知できない場合のタイムアウト（0以下で無効）")]
     public float timeoutSeconds = 6.0f;
@@ -107,10 +111,15 @@ public class HapticGripCalibrationController : MonoBehaviour
         _wasCancelled = false;
         currentFingerIndex = -1;
         currentServoValue = 0;
-        statusMessage = "軽く握ってください。\nキャリブレーション中は指の力を抜いてください。";
+        statusMessage = "キャリブレーション中は軽く握った状態を維持してください。";
 
         _previousSenderEnableSend = serialSender.enableSend;
         serialSender.enableSend = false;
+
+        if (resetStateOnStart && calibrationState != null)
+        {
+            calibrationState.ResetAll();
+        }
 
         GetSweepRangeAscending(out int start, out int end, out int step);
         EnsureScratchTargets();
@@ -128,43 +137,13 @@ public class HapticGripCalibrationController : MonoBehaviour
         {
             for (int s = initialCountdownSeconds; s >= 1; s--)
             {
-                statusMessage = $"軽く握ってください。\nキャリブレーション中は指の力を抜いてください。\n開始まで {s}";
+                statusMessage = $"キャリブレーション中は軽く握った状態を維持してください。\n開始まで {s}";
                 yield return new WaitForSecondsRealtime(1f);
                 if (_wasCancelled) yield break;
             }
         }
 
-        bool[] succeeded = new bool[FingerCount];
-
-        for (int finger = 0; finger < FingerCount; finger++)
-        {
-            if (_wasCancelled) yield break;
-
-            currentFingerIndex = finger;
-            currentServoValue = start;
-
-            // 指ごとの案内 + カウントダウン（3,2,1）
-            if (perFingerCountdownSeconds > 0)
-            {
-                for (int s = perFingerCountdownSeconds; s >= 1; s--)
-                {
-                    statusMessage = $"{FingerNameJapanese(finger)}が動きます。\n開始まで {s}";
-                    yield return new WaitForSecondsRealtime(1f);
-                    if (_wasCancelled) yield break;
-                }
-            }
-            else
-            {
-                statusMessage = $"{FingerNameJapanese(finger)}が動きます。";
-            }
-
-            yield return CalibrateSingleFingerByOutOfRange(finger, succeeded, start, end, step);
-
-            // 次の指に移る前に、全指を start に戻す
-            // （確定済みの指は released を維持する）
-            serialSender.TrySendNow(_holdTargets, bypassGuards: true);
-            ApplyHoldTargetsToSender();
-        }
+        yield return CalibrateAllFingersByOutOfRange(start, end, step);
 
         currentFingerIndex = -1;
         currentServoValue = 0;
@@ -173,68 +152,91 @@ public class HapticGripCalibrationController : MonoBehaviour
         CleanupAfterRoutine();
     }
 
-    private IEnumerator CalibrateSingleFingerByOutOfRange(int finger, bool[] succeeded, int start, int end, int step)
+    private IEnumerator CalibrateAllFingersByOutOfRange(int start, int end, int step)
     {
-        if (succeeded[finger])
-        {
-            statusMessage = $"{FingerNameJapanese(finger)} は保存済みです。";
-            yield break;
-        }
-
-        // 指ごとの基準（軽く握って力を抜いた状態）の sensorRaw を取得
         int samples = Mathf.Max(1, baselineSamples);
-        int sum = 0;
+        float sampleInterval = Mathf.Max(0f, baselineSampleIntervalSeconds);
+
+        // 基準（軽く握った状態）の sensorRaw を指ごとに取得
+        var baseline = new int[FingerCount];
+        var sums = new int[FingerCount];
         for (int s = 0; s < samples; s++)
         {
-            sum += GetSensorRawSafe(finger);
-            if (baselineSampleIntervalSeconds > 0f)
+            for (int i = 0; i < FingerCount; i++)
             {
-                yield return new WaitForSecondsRealtime(baselineSampleIntervalSeconds);
+                sums[i] += GetSensorRawSafe(i);
             }
+
+            if (sampleInterval > 0f)
+            {
+                yield return new WaitForSecondsRealtime(sampleInterval);
+            }
+
             if (_wasCancelled) yield break;
         }
 
-        int baseline = sum / samples;
+        for (int i = 0; i < FingerCount; i++)
+        {
+            baseline[i] = sums[i] / samples;
+        }
+
         int dev = Mathf.Max(0, allowedBaselineDeviation);
-        int min = baseline - dev;
-        int max = baseline + dev;
+        var min = new int[FingerCount];
+        var max = new int[FingerCount];
+        for (int i = 0; i < FingerCount; i++)
+        {
+            min[i] = baseline[i] - dev;
+            max[i] = baseline[i] + dev;
+        }
 
         int required = Mathf.Max(1, requiredConsecutiveOutOfRange);
-        int outOfRangeCount = 0;
-        int prevServoValue = start;
-        float elapsed = 0f;
+        var outOfRangeCount = new int[FingerCount];
+        var candidatePrev = new int[FingerCount];
+        var prevServoValue = new int[FingerCount];
 
-        // 既に確定した指は released 値を維持し、未確定は start にする
         EnsureHoldTargets();
         for (int i = 0; i < FingerCount; i++)
         {
-            if (calibrationState.TryGetReleasedServoValue(i, out int released))
+            if (calibrationState != null && calibrationState.TryGetReleasedServoValue(i, out int released))
             {
                 _holdTargets[i] = released;
+                prevServoValue[i] = released;
             }
             else
             {
                 _holdTargets[i] = start;
+                prevServoValue[i] = start;
             }
+            candidatePrev[i] = prevServoValue[i];
+            outOfRangeCount[i] = 0;
         }
-        serialSender.TrySendNow(_holdTargets, bypassGuards: true);
+
+        float elapsed = 0f;
 
         for (int v = start; v <= end; v += step)
         {
             if (_wasCancelled) yield break;
-
-            if (timeoutSeconds > 0f && elapsed > timeoutSeconds)
-            {
-                break;
-            }
+            if (calibrationState != null && calibrationState.IsFullyCalibrated) break;
+            if (timeoutSeconds > 0f && elapsed > timeoutSeconds) break;
 
             int clamped = Clamp1000(v);
-            // 他指は _holdTargets（確定済み released / 未確定 start）で維持し、対象指だけスイープ
-            for (int i = 0; i < FingerCount; i++) _scratchTargets[i] = _holdTargets[i];
-            _scratchTargets[finger] = clamped;
+            currentServoValue = clamped;
+
+            // 未確定の指だけスイープ、確定済みは released を固定
+            EnsureScratchTargets();
+            for (int i = 0; i < FingerCount; i++)
+            {
+                if (calibrationState != null && calibrationState.TryGetReleasedServoValue(i, out int released))
+                {
+                    _scratchTargets[i] = released;
+                }
+                else
+                {
+                    _scratchTargets[i] = clamped;
+                }
+            }
 
             serialSender.TrySendNow(_scratchTargets, bypassGuards: true);
-            currentServoValue = clamped;
 
             if (stepIntervalSeconds > 0f)
             {
@@ -242,31 +244,79 @@ public class HapticGripCalibrationController : MonoBehaviour
                 elapsed += stepIntervalSeconds;
             }
 
-            int now = GetSensorRawSafe(finger);
-            bool outOfRange = now < min || now > max;
-            outOfRangeCount = outOfRange ? (outOfRangeCount + 1) : 0;
-
-            statusMessage = $"{FingerNameJapanese(finger)} キャリブ中... {clamped}";
-
-            if (outOfRangeCount >= required)
+            bool anySavedThisStep = false;
+            for (int i = 0; i < FingerCount; i++)
             {
-                // レンジ外に出た「直前」の値を released として保存し、即座にその指へ反映する。
-                calibrationState.SetReleasedServoValue(finger, prevServoValue);
-                succeeded[finger] = true;
+                if (calibrationState != null && calibrationState.TryGetReleasedServoValue(i, out _))
+                {
+                    continue;
+                }
 
-                // 確定値を維持（以降の指キャリブ中も released を保持する）
-                _holdTargets[finger] = prevServoValue;
-                serialSender.TrySendNow(_holdTargets, bypassGuards: true);
-                ApplyHoldTargetsToSender();
+                int now = GetSensorRawSafe(i);
+                bool outOfRange = now < min[i] || now > max[i];
+                if (outOfRange)
+                {
+                    if (outOfRangeCount[i] == 0)
+                    {
+                        // レンジ外に出た瞬間の「1ステップ前」を候補として記録
+                        candidatePrev[i] = prevServoValue[i];
+                    }
 
-                statusMessage = $"{FingerNameJapanese(finger)} 保存: {prevServoValue}（反映）";
-                yield break;
+                    outOfRangeCount[i]++;
+                    if (outOfRangeCount[i] >= required)
+                    {
+                        int saved = Clamp1000(candidatePrev[i] + releasedValueOffset);
+                        if (calibrationState != null)
+                        {
+                            calibrationState.SetReleasedServoValue(i, saved);
+                        }
+
+                        _holdTargets[i] = saved;
+                        anySavedThisStep = true;
+                        currentFingerIndex = i;
+
+                        // 保存した瞬間、その指の released を反映（他指は現状維持）
+                        for (int f = 0; f < FingerCount; f++)
+                        {
+                            if (calibrationState != null && calibrationState.TryGetReleasedServoValue(f, out int released))
+                            {
+                                _scratchTargets[f] = released;
+                            }
+                            else
+                            {
+                                _scratchTargets[f] = clamped;
+                            }
+                        }
+                        serialSender.TrySendNow(_scratchTargets, bypassGuards: true);
+                        ApplyHoldTargetsToSender();
+                    }
+                }
+                else
+                {
+                    outOfRangeCount[i] = 0;
+                }
+
+                prevServoValue[i] = clamped;
             }
 
-            prevServoValue = clamped;
-        }
+            int afterSavedCount = 0;
+            if (calibrationState != null)
+            {
+                for (int i = 0; i < FingerCount; i++)
+                {
+                    if (calibrationState.TryGetReleasedServoValue(i, out _)) afterSavedCount++;
+                }
+            }
 
-        statusMessage = $"{FingerNameJapanese(finger)} 失敗（レンジ外にならない）";
+            if (anySavedThisStep)
+            {
+                statusMessage = $"キャリブレーション中は軽く握った状態を維持してください。\n保存 {afterSavedCount}/{FingerCount}（最新: {FingerNameJapanese(currentFingerIndex)}）";
+            }
+            else
+            {
+                statusMessage = $"キャリブレーション中は軽く握った状態を維持してください。\n進捗 {afterSavedCount}/{FingerCount}  現在 {clamped}";
+            }
+        }
     }
 
     private void CleanupAfterRoutine()
