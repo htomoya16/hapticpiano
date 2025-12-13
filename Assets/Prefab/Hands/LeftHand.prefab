@@ -37,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 800, y: 400}
+  m_SizeDelta: {x: 700, y: 400}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6132873979571473216
 CanvasRenderer:
@@ -94,6 +94,68 @@ MonoBehaviour:
   panelRoot: {fileID: 841301664839044115}
   debugEnabled: 1
   title: Right Hand Curl
+--- !u!1 &882992778223253324
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 9057953271291438146}
+  - component: {fileID: 6018639698517888193}
+  - component: {fileID: 3663222704628422728}
+  m_Layer: 0
+  m_Name: SerialPortAdapter_Left
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &9057953271291438146
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882992778223253324}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.27467072, y: -0.67069244, z: 0.04637734}
+  m_LocalScale: {x: 1.0177534, y: 1.0177534, z: 1.0177534}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2797225583930752958}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6018639698517888193
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882992778223253324}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 397cc24d6a54e514bbf5fe60ac2229ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  logOpenClose: 1
+  logErrors: 1
+--- !u!114 &3663222704628422728
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 882992778223253324}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ffc243b12ff6c9447bd4bf65a41e87b2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serialAdapter: {fileID: 6018639698517888193}
+  interval: 0.01
+  enablePing: 1
 --- !u!1 &4040111507099834837
 GameObject:
   m_ObjectHideFlags: 0
@@ -175,7 +237,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 800, y: 300}
+  m_SizeDelta: {x: 700, y: 300}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4313561762442470102
 CanvasRenderer:
@@ -209,8 +271,8 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 26bf4157562312847a039a8055370a7e, type: 2}
-  m_sharedMaterial: {fileID: -592952922542826705, guid: 26bf4157562312847a039a8055370a7e, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
+  m_sharedMaterial: {fileID: 204354137830494628, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -307,6 +369,58 @@ Transform:
   m_Children: []
   m_Father: {fileID: 2797225583930752958}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &5612483642192940635
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7621016003656325957}
+  - component: {fileID: 4382996720651231900}
+  m_Layer: 0
+  m_Name: HandSensorReceiver_Left
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7621016003656325957
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5612483642192940635}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.40463912, y: -0.04402702, z: 0.14287078}
+  m_LocalScale: {x: 1.0177534, y: 1.0177534, z: 1.0177534}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2797225583930752958}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4382996720651231900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5612483642192940635}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d246eeba5748294a9c01a2677b1a23f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serialAdapter: {fileID: 6018639698517888193}
+  baudRate: 115200
+  portName: COM3
+  targetTracker: {fileID: 987898318848378252}
+  isCalibrating: 0
+  logErrors: 1
+  lastReceivedLine: 
+  logRawInput: 0
 --- !u!1 &5656427025605216613
 GameObject:
   m_ObjectHideFlags: 0
@@ -479,6 +593,108 @@ MonoBehaviour:
   handAnchor: {fileID: 4762758637704735544}
   localOffset: {x: 0.05, y: 0.03, z: 0}
   eulerOffset: {x: 0, y: 0, z: 0}
+--- !u!1 &7630186643920530073
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2333281428336469770}
+  - component: {fileID: 4531933214152968344}
+  - component: {fileID: 1473747827633378020}
+  - component: {fileID: 5846138339072508012}
+  m_Layer: 26
+  m_Name: Haptics_Left
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2333281428336469770
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7630186643920530073}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.5088767, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2797225583930752958}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4531933214152968344
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7630186643920530073}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6dd3eac7d0a2f7b49b8a2d21d3f2e6fb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  releasedServoValues: 0000000000000000000000000000000000000000
+  hasReleasedServoValue: 0000000000
+--- !u!114 &1473747827633378020
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7630186643920530073}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5aef82e95de88d45ac8f9630055d8b7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  serialAdapter: {fileID: 6018639698517888193}
+  enableSend: 1
+  calibrationState: {fileID: 4531933214152968344}
+  currentFingerTargets: 0000000000000000000000000000000000000000
+  logErrors: 1
+  lastStatus: 
+  lastEncodedLine: 
+  lastTargets: 0000000000000000000000000000000000000000
+  lastChannelTargets: 0000000000000000000000000000000000000000
+  sendAttempts: 0
+  sendSucceeded: 0
+  lastSendFrame: -1
+  lastSendRealtime: 0
+--- !u!114 &5846138339072508012
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7630186643920530073}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c75e5f8c8f6f5347a5c8c8d4abf1b1c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  curlTracker: {fileID: 987898318848378252}
+  serialSender: {fileID: 1473747827633378020}
+  calibrationState: {fileID: 4531933214152968344}
+  stepSize: 20
+  stepIntervalSeconds: 0.05
+  allowedBaselineDeviation: 120
+  requiredConsecutiveOutOfRange: 3
+  baselineSamples: 10
+  baselineSampleIntervalSeconds: 0.02
+  initialCountdownSeconds: 10
+  resetStateOnStart: 1
+  releasedValueOffset: -135
+  timeoutSeconds: 6
+  isRunning: 0
+  currentFingerIndex: -1
+  currentServoValue: 0
+  statusMessage: 
 --- !u!1 &8271229991019146744
 GameObject:
   m_ObjectHideFlags: 0
@@ -522,7 +738,6 @@ GameObject:
   - component: {fileID: 8368045469934548095}
   - component: {fileID: 5248842747980470848}
   - component: {fileID: 987898318848378252}
-  - component: {fileID: 332971670583884273}
   - component: {fileID: 4700687522555402859}
   - component: {fileID: 1005612650545816350}
   m_Layer: 26
@@ -542,9 +757,12 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -0.25, y: 1, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 0.9825563, y: 0.9825563, z: 0.9825563}
+  m_ConstrainProportionsScale: 1
   m_Children:
+  - {fileID: 9057953271291438146}
+  - {fileID: 7621016003656325957}
+  - {fileID: 2333281428336469770}
   - {fileID: 4762758634477500574}
   - {fileID: 4972781427966494039}
   - {fileID: 5612382691528696900}
@@ -650,36 +868,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   hand: {fileID: 8368045469934548095}
   sensorRaw: 0000000000000000000000000000000000000000
+  curlRaw:
+  - 0
+  - 0
+  - 0
+  - 0
+  - 0
   curl01:
   - 0
   - 0
   - 0
   - 0
   - 0
-  curlFfb: 00000000000000000000
---- !u!114 &332971670583884273
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8887060833606070949}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 633a3769fc6d2164091cd7a36ba220ec, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  portName: COM3
-  baudRate: 115200
-  autoOpenOnStart: 1
-  targetTracker: {fileID: 987898318848378252}
-  sendRequest: 1
-  requestInterval: 0.01
-  requestCommand: 
-  logOpenClose: 1
-  logErrors: 1
-  lastEncodedLine: 
-  isCalibrating: 0
+  useFiltering: 1
+  filterAlpha: 0.25
+  snapThreshold: 0.35
+  noiseThreshold: 0.01
+  preset: {fileID: 11400000, guid: 3bcfa2caa4c34284c9c52c4c0402c9f9, type: 2}
+  applyPresetOnAwake: 1
 --- !u!114 &4700687522555402859
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -692,7 +898,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 50641a895abf2b54ba357af5f2bab0fc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  serialInput: {fileID: 332971670583884273}
+  sensorReceiver: {fileID: 4382996720651231900}
   handRoot: {fileID: 4762758634477500574}
   isFrozen: 0
 --- !u!114 &1005612650545816350
@@ -797,6 +1003,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   curlSource: {fileID: 987898318848378252}
+  kinematicsProfile: {fileID: 11400000, guid: a58ebd8b51a408b43ab96f64c818dc2c, type: 2}
   thumbJoints:
   - {fileID: 4762758635346982198}
   - {fileID: 4762758636726877856}
@@ -889,7 +1096,7 @@ MonoBehaviour:
     - {fileID: 4762758636790881012}
     maxColliders: 0
     overrideRadius: 0
-  defaultRadius: 0.008
+  defaultRadius: 0.0075
   capsuleDirection: 2
   layerToAssign: -1
   physicMaterial: {fileID: 0}

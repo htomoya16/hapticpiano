@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// 手ボーン構造を参照し、実行時に指コライダを自動生成する。
@@ -30,6 +31,11 @@ public class FingerColliderBuilder : MonoBehaviour
     public FingerConfig middle;
     public FingerConfig ring;
     public FingerConfig pinky;
+
+    [Header("Finger Id")]
+    [Tooltip("生成した指コライダに付与する手の左右。")]
+    [FormerlySerializedAs("handSide")]
+    public Handedness handedness = Handedness.Right;
 
     [Header("Collider Settings")]
     [Tooltip("CapsuleCollider の半径既定値（overrideRadius が 0 以下の場合に使用）。")]
@@ -119,14 +125,14 @@ public class FingerColliderBuilder : MonoBehaviour
 
     private void BuildAll()
     {
-        BuildFinger(thumb, "Thumb");
-        BuildFinger(index, "Index");
-        BuildFinger(middle, "Middle");
-        BuildFinger(ring, "Ring");
-        BuildFinger(pinky, "Pinky");
+        BuildFinger(thumb, FingerId.Thumb, "Thumb");
+        BuildFinger(index, FingerId.Index, "Index");
+        BuildFinger(middle, FingerId.Middle, "Middle");
+        BuildFinger(ring, FingerId.Ring, "Ring");
+        BuildFinger(pinky, FingerId.Pinky, "Pinky");
     }
 
-    private void BuildFinger(FingerConfig cfg, string namePrefix)
+    private void BuildFinger(FingerConfig cfg, FingerId fingerId, string namePrefix)
     {
         if (cfg == null || cfg.jointsTipToRoot == null || cfg.jointsTipToRoot.Length < 2)
             return;
@@ -141,11 +147,11 @@ public class FingerColliderBuilder : MonoBehaviour
             if (a == null || b == null) continue;
 
             CreateCapsuleBetween(a, b, cfg.overrideRadius > 0 ? cfg.overrideRadius : defaultRadius,
-                $"{namePrefix}_col_{i}");
+                $"{namePrefix}_col_{i}", fingerId, i);
         }
     }
 
-    private void CreateCapsuleBetween(Transform tip, Transform root, float radius, string objName)
+    private void CreateCapsuleBetween(Transform tip, Transform root, float radius, string objName, FingerId fingerId, int segmentIndex)
     {
         Vector3 worldA = tip.position;
         Vector3 worldB = root.position;
@@ -160,6 +166,9 @@ public class FingerColliderBuilder : MonoBehaviour
         var col = go.AddComponent<CapsuleCollider>();
         col.direction = capsuleDirection;
         if (physicMaterial != null) col.sharedMaterial = physicMaterial;
+
+        var id = go.AddComponent<FingerColliderId>();
+        id.Set(handedness, fingerId, segmentIndex);
 
         if (layerToAssign >= 0 && layerToAssign < 32)
         {

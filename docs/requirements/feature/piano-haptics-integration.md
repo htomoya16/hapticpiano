@@ -23,8 +23,15 @@
   - `KeyMode` は鍵盤アニメーション等のために存在する
   - **現状の触覚送信は `KeyMode` と連動しない**（必要になったら別ストーリーで扱う）
 
+## 実装メモ（接触検出）
+- 鍵盤（`PianoKey.001`〜`PianoKey.088`）側で Collision を受け、相手の `FingerColliderId` から「どの手・どの指か」を取得する。
+  - 指先のみ判定: `FingerColliderId.segmentIndex==0` を採用する。
+- 底面判定は鍵盤角度（`transform.eulerAngles.x`）で行い、`x <= 352.5f` を底面到達として扱う（`0°` 表示になる場合は `+360` 補正して判定する）。
+
 ## 将来拡張（別ストーリーで扱う）
 - ピアノ鍵盤接触での「ピアノ触覚モード」遷移、底面到達で指ごと送信停止
 - 通常時の「先行係数（曲げ量よりわずかに先行）」の導入（パラメータ化）
 - 指ごとのオフセット保存、キャリブレーション値の永続化（PlayerPrefs 等）
 
+## 関連（要件の所在）
+- ランタイムの触覚生成（通常/ピアノ触覚モード、底面停止）は `feature/haptics-runtime-feedback.md` / `story/haptics-runtime-feedback-piano-mode.md` にまとめる。

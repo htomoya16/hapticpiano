@@ -32,6 +32,8 @@ public class SettingsOverlayOpener : MonoBehaviour
     private RenderMode _savedRenderMode;
     private bool _canvasSaved;
 
+    public bool IsOpen => panelRoot != null && panelRoot.activeSelf;
+
     private void Start()
     {
         if (panelRoot != null) panelRoot.SetActive(false);

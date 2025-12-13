@@ -31,8 +31,21 @@ public class HapticSerialSender : MonoBehaviour
     [Tooltip("警告ログを出す")]
     public bool logErrors = true;
 
+    [Header("Rate Limit")]
+    [Tooltip("送信レート上限（Hz）。0以下で無制限。目安: 30")]
+    public float maxSendHz = 25f;
+
+    [Tooltip("前回送信値から変化がない（または小さい）場合は送信しない")]
+    public bool sendOnlyWhenChanged = true;
+
+    [Tooltip("送信する最小変化量（指ごとの絶対差）。例: 2")]
+    public int minDeltaToSend = 2;
+
     private bool _warnedNotCalibrated = false;
     private bool _wasOpen = false;
+    private float _lastSentRealtime = -999f;
+    private bool _hasLastSent;
+    private int[] _lastSentFingerTargets = new int[FingerCount];
 
     [Header("Debug (read-only)")]
     [SerializeField] private string lastStatus;
@@ -99,6 +112,27 @@ public class HapticSerialSender : MonoBehaviour
             if (logErrors) Debug.LogWarning("[HapticSerialSender] targets length invalid.");
             SetStatus("Targets invalid");
             return;
+        }
+
+        if (maxSendHz > 0f)
+        {
+            float minInterval = 1f / Mathf.Max(0.0001f, maxSendHz);
+            float now = Time.realtimeSinceStartup;
+            if (now - _lastSentRealtime < minInterval)
+            {
+                SetStatus("Rate limited");
+                return;
+            }
+        }
+
+        if (sendOnlyWhenChanged && _hasLastSent)
+        {
+            int threshold = Mathf.Max(0, minDeltaToSend);
+            if (!HasChangedEnough(currentFingerTargets, _lastSentFingerTargets, threshold))
+            {
+                SetStatus("No change");
+                return;
+            }
         }
 
         TrySendNow(currentFingerTargets, bypassGuards: false);
@@ -190,10 +224,12 @@ public class HapticSerialSender : MonoBehaviour
         bool ok = serialAdapter.TryWriteLine(encoded);
         lastSendFrame = Time.frameCount;
         lastSendRealtime = Time.realtimeSinceStartup;
+        _lastSentRealtime = lastSendRealtime;
 
         if (ok)
         {
             sendSucceeded++;
+            RememberLastSent(fingerTargets);
             SetStatus("Sent");
         }
         else
@@ -249,5 +285,32 @@ public class HapticSerialSender : MonoBehaviour
             channel[channelIndex] = fingerTargets[fingerIndex];
         }
         return channel;
+    }
+
+    private void RememberLastSent(int[] fingerTargets)
+    {
+        if (_lastSentFingerTargets == null || _lastSentFingerTargets.Length != FingerCount)
+        {
+            _lastSentFingerTargets = new int[FingerCount];
+        }
+
+        for (int i = 0; i < FingerCount; i++)
+        {
+            _lastSentFingerTargets[i] = fingerTargets[i];
+        }
+        _hasLastSent = true;
+    }
+
+    private static bool HasChangedEnough(int[] a, int[] b, int minDelta)
+    {
+        if (a == null || b == null) return true;
+        if (a.Length != FingerCount || b.Length != FingerCount) return true;
+
+        for (int i = 0; i < FingerCount; i++)
+        {
+            if (Mathf.Abs(a[i] - b[i]) >= minDelta) return true;
+        }
+
+        return false;
     }
 }

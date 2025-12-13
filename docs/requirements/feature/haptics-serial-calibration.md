@@ -22,7 +22,8 @@
   - シリアルポートが Open になったタイミングで全指 0 を 1 回送信（安全初期化）
   - シーン終了/アプリ終了直前に全指 0 を 1 回送信（安全停止）
   - 未キャリブレーション時はサーボを動作させない
-  - ピアノとの連動（接触/底面/モード）は別 feature を参照: `feature/piano-haptics-integration.md`
+  - ランタイムでの触覚生成（通常モード/ピアノ触覚モード/底面停止）は別 feature を参照: `feature/haptics-runtime-feedback.md`
+  - ピアノとの連動（接触/底面/モード設計メモ）は別 feature を参照: `feature/piano-haptics-integration.md`
 
 ## 非スコープ
 - ESP32 ファームウェア変更
