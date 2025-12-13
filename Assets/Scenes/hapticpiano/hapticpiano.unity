@@ -1059,11 +1059,10 @@ MonoBehaviour:
   requiredConsecutiveOutOfRange: 3
   baselineSamples: 10
   baselineSampleIntervalSeconds: 0.02
-  preHoldSeconds: 1
-  preHoldCountdownSeconds: 5
+  initialCountdownSeconds: 10
+  resetStateOnStart: 1
+  releasedValueOffset: -70
   timeoutSeconds: 6
-  sendReleasedValuesOnComplete: 1
-  fillUncalibratedWithStartValue: 1
   isRunning: 0
   currentFingerIndex: -1
   currentServoValue: 0
@@ -4118,11 +4117,10 @@ MonoBehaviour:
   requiredConsecutiveOutOfRange: 3
   baselineSamples: 10
   baselineSampleIntervalSeconds: 0.02
-  preHoldSeconds: 1
-  preHoldCountdownSeconds: 5
+  initialCountdownSeconds: 10
+  resetStateOnStart: 1
+  releasedValueOffset: -70
   timeoutSeconds: 6
-  sendReleasedValuesOnComplete: 1
-  fillUncalibratedWithStartValue: 1
   isRunning: 0
   currentFingerIndex: -1
   currentServoValue: 0
@@ -12097,7 +12095,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: a58ebd8b51a408b43ab96f64c818dc2c, type: 2}
     - target: {fileID: 498196789768907375, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 1000
+      value: 700
       objectReference: {fileID: 0}
     - target: {fileID: 1692188228894136600, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: preset
@@ -12125,7 +12123,7 @@ PrefabInstance:
       objectReference: {fileID: 1687686149}
     - target: {fileID: 3012095023978704520, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 1000
+      value: 700
       objectReference: {fileID: 0}
     - target: {fileID: 3814381015753934336, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: cameraTransform
@@ -12765,7 +12763,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: 3bcfa2caa4c34284c9c52c4c0402c9f9, type: 2}
     - target: {fileID: 2354909633541799815, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 1000
+      value: 700
       objectReference: {fileID: 0}
     - target: {fileID: 2576024085140815269, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: m_Camera
@@ -12845,7 +12843,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5590827864535457412, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 1000
+      value: 700
       objectReference: {fileID: 0}
     - target: {fileID: 6727141065411101357, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: cameraTransform
