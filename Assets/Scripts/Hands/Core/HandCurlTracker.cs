@@ -23,9 +23,6 @@ public class HandCurlTracker : MonoBehaviour
     [Tooltip("フィルタ後の curl 値（0〜1, 親指〜小指）")]
     [SerializeField] public float[] curl01 = new float[FingerCount];
 
-    [Tooltip("ForceFeedback 用に 0〜1000 に変換した curl 値（親指〜小指）")]
-    [SerializeField] public short[] curlFfb = new short[FingerCount];
-
     [Header("Filtering")]
     [Tooltip("true のとき curlRaw にローパスフィルタをかけて curl01 を更新する。false ならフィルタなし。")]
     public bool useFiltering = true;
@@ -79,7 +76,7 @@ public class HandCurlTracker : MonoBehaviour
     }
 
     /// <summary>
-    /// デコード済みのセンサ値（A〜E, 0〜1000）を受け取り、sensorRaw を更新する。
+    /// デコード済みのセンサ値（A〜E, 0〜4095）を受け取り、sensorRaw を更新する。
     /// </summary>
     public void UpdateSensorFromDecodedValues(int[] decodedValues)
     {
@@ -156,11 +153,6 @@ public class HandCurlTracker : MonoBehaviour
 
             cFiltered = Mathf.Clamp01(cFiltered);
             curl01[i] = cFiltered;
-
-            // FFB 側と互換性を保つため、
-            // 1000 = 指が開いている / 0 = 完全に握っている、という向きに反転する。
-            short ffbValue = (short)(1000 - Mathf.RoundToInt(cFiltered * 1000f));
-            curlFfb[i] = ffbValue;
         }
     }
 
@@ -176,10 +168,6 @@ public class HandCurlTracker : MonoBehaviour
             curl01 = new float[FingerCount];
         }
 
-        if (curlFfb == null || curlFfb.Length != FingerCount)
-        {
-            curlFfb = new short[FingerCount];
-        }
     }
 
     private void EnsureSensorArrays()
@@ -198,5 +186,5 @@ public class HandCurlTracker : MonoBehaviour
     }
 
     // Skeleton 依存のリセット処理は削除し、
-    // curl01 / curlFfb は UpdateFromSensor 側で常に上書き更新する方針とする。
+    // curl01 は UpdateFromSensor 側で常に上書き更新する方針とする。
 }
