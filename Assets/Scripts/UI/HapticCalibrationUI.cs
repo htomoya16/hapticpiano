@@ -8,6 +8,10 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public class HapticCalibrationUI : MonoBehaviour
 {
+    private const string GraspHintMessage = "写真のように握った状態を維持していてください";
+    private const int TableStartPosPx = 120;
+    private const int TableColStepPx = 70;
+
     public enum HandSide
     {
         Right = 0,
@@ -25,13 +29,10 @@ public class HapticCalibrationUI : MonoBehaviour
     [SerializeField] private HandSide selectedHand = HandSide.Right;
 
     [Header("UI (optional)")]
-    [Tooltip("例: 「右手の触覚フィードバックを調整中」")]
-    public TMP_Text titleText;
-
     [Tooltip("選択中の手の状態表示（StatusMessage）")]
     public TMP_Text statusText;
 
-    [Tooltip("選択中の手の値表示（released 値：親指/人差し指/中指/薬指/小指）")]
+    [Tooltip("選択中の手の値表示（手の左右 + released 値：親指/人差し指/中指/薬指/小指）")]
     public TMP_Text valuesText;
 
     [Header("UI (optional, visibility)")]
@@ -40,6 +41,12 @@ public class HapticCalibrationUI : MonoBehaviour
 
     [Tooltip("Cancel ボタンのルート（キャリブ中のみ表示）")]
     public GameObject cancelButtonRoot;
+
+    [Tooltip("Reset ボタンのルート（キャリブ中は非表示）")]
+    public GameObject resetButtonRoot;
+
+    [Tooltip("握り方の写真（キャリブ案内表示中のみ表示）")]
+    public GameObject graspHintImageRoot;
 
     [Tooltip("右手/左手選択ボタン群のルート（キャリブ中は非表示にしたい場合）")]
     public GameObject handSelectRoot;
@@ -124,22 +131,22 @@ public class HapticCalibrationUI : MonoBehaviour
 
         if (startButtonRoot != null) startButtonRoot.SetActive(!running);
         if (cancelButtonRoot != null) cancelButtonRoot.SetActive(running);
+        if (resetButtonRoot != null) resetButtonRoot.SetActive(!running);
         if (handSelectRoot != null && hideHandSelectWhileRunning) handSelectRoot.SetActive(!running);
 
         var displaySide = running ? runningSide : selectedHand;
         var active = GetController(displaySide);
 
-        if (titleText != null)
+        if (graspHintImageRoot != null)
         {
-            titleText.text = displaySide == HandSide.Left
-                ? "左手の触覚フィードバックを調整中"
-                : "右手の触覚フィードバックを調整中";
+            string msg = active != null ? active.StatusMessage : null;
+            graspHintImageRoot.SetActive(!string.IsNullOrEmpty(msg) && msg.Contains(GraspHintMessage));
         }
 
-        UpdateTexts(active, statusText, valuesText);
+        UpdateTexts(active, displaySide, statusText, valuesText);
     }
 
-    private void UpdateTexts(HapticGripCalibrationController c, TMP_Text status, TMP_Text values)
+    private void UpdateTexts(HapticGripCalibrationController c, HandSide side, TMP_Text status, TMP_Text values)
     {
         if (c == null) return;
 
@@ -151,21 +158,38 @@ public class HapticCalibrationUI : MonoBehaviour
         if (values != null)
         {
             var state = c.calibrationState;
+            string sideLabel = side == HandSide.Left ? "左手" : "右手";
+            int c0 = TableStartPosPx;
+            int c1 = c0 + TableColStepPx;
+            int c2 = c1 + TableColStepPx;
+            int c3 = c2 + TableColStepPx;
+            int c4 = c3 + TableColStepPx;
+
+            static string Cell(string s)
+            {
+                if (string.IsNullOrEmpty(s)) return "—";
+                return s == "—" ? "—" : s;
+            }
+
             if (state == null)
             {
-                values.text = "未キャリブレーション";
+                values.text =
+                    $"{sideLabel}<pos={c0}>親<pos={c1}>人<pos={c2}>中<pos={c3}>薬<pos={c4}>小\n" +
+                    $"<pos={c0}>—<pos={c1}>—<pos={c2}>—<pos={c3}>—<pos={c4}>—";
                 return;
             }
 
             // 部分的でも見える化する（? は未保存）
             // state の順番は Thumb/Index/Middle/Ring/Pinky
-            string th = state.TryGetReleasedServoValue(0, out int thv) ? thv.ToString() : "?";
-            string ix = state.TryGetReleasedServoValue(1, out int ixv) ? ixv.ToString() : "?";
-            string md = state.TryGetReleasedServoValue(2, out int mdv) ? mdv.ToString() : "?";
-            string rg = state.TryGetReleasedServoValue(3, out int rgv) ? rgv.ToString() : "?";
-            string pk = state.TryGetReleasedServoValue(4, out int pkv) ? pkv.ToString() : "?";
-            string suffix = state.IsFullyCalibrated ? string.Empty : "（未完了）";
-            values.text = $"親指:{th}  人差し指:{ix}  中指:{md}\n薬指:{rg}  小指:{pk}{suffix}";
+            string th = state.TryGetReleasedServoValue(0, out int thv) ? thv.ToString() : "—";
+            string ix = state.TryGetReleasedServoValue(1, out int ixv) ? ixv.ToString() : "—";
+            string md = state.TryGetReleasedServoValue(2, out int mdv) ? mdv.ToString() : "—";
+            string rg = state.TryGetReleasedServoValue(3, out int rgv) ? rgv.ToString() : "—";
+            string pk = state.TryGetReleasedServoValue(4, out int pkv) ? pkv.ToString() : "—";
+
+            values.text =
+                $"{sideLabel}<pos={c0}>親<pos={c1}>人<pos={c2}>中<pos={c3}>薬<pos={c4}>小\n" +
+                $"<pos={c0}>{Cell(th)}<pos={c1}>{Cell(ix)}<pos={c2}>{Cell(md)}<pos={c3}>{Cell(rg)}<pos={c4}>{Cell(pk)}";
         }
     }
 

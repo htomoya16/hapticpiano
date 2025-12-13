@@ -3,7 +3,7 @@ using UnityEngine;
 
 /// <summary>
 /// キャリブレーション（現行）:
-/// - 「キャリブレーション中は軽く握った状態を維持してください」を案内し、開始前にカウントダウンする
+/// - 「写真のように握った状態を維持していてください」を案内し、開始前にカウントダウンする
 /// - 全指を同時に 0→1000 へ段階的に動かす（未確定の指のみ）
 /// - 指ごとに sensorRaw が基準レンジ（±許容）から外れた瞬間の 1 ステップ前のサーボ値を released として保存する
 /// - 指が確定したら、その指は即座に released を送って固定し、残り指のキャリブレーションを継続する
@@ -19,13 +19,7 @@ public class HapticGripCalibrationController : MonoBehaviour
     public HapticCalibrationState calibrationState;
 
     [Header("Sweep")]
-    [Tooltip("スイープ開始サーボ値")]
-    public int startServoValue = 0;
-
-    [Tooltip("スイープ終了サーボ値")]
-    public int endServoValue = 1000;
-
-    [Tooltip("サーボ値のステップ幅（大きいほど速いが精度は落ちる）")]
+    [Tooltip("サーボ値のステップ幅（大きいほど速いが精度は落ちる）。キャリブレーションは常に 0→1000 をスイープする。")]
     public int stepSize = 20;
 
     [Tooltip("1ステップごとの待機（リアルタイム秒）。設定画面で TimeScale=0 でも動くように Realtime を使う")]
@@ -39,9 +33,11 @@ public class HapticGripCalibrationController : MonoBehaviour
     public int requiredConsecutiveOutOfRange = 3;
 
     [Tooltip("基準値を取るときのサンプル数")]
+    [HideInInspector]
     public int baselineSamples = 10;
 
     [Tooltip("基準値サンプルの間隔（リアルタイム秒）")]
+    [HideInInspector]
     public float baselineSampleIntervalSeconds = 0.02f;
 
     [Header("Flow")]
@@ -52,9 +48,10 @@ public class HapticGripCalibrationController : MonoBehaviour
     public bool resetStateOnStart = true;
 
     [Tooltip("保存する released 値に加算するオフセット（+で 1000 側＝張る方向、-で 0 側＝ゆるむ方向）。保存時に 0-1000 にクランプされる。")]
-    public int releasedValueOffset = 0;
+    public int releasedValueOffset = -135;
 
     [Tooltip("スイープで変化が検知できない場合のタイムアウト（0以下で無効）")]
+    [HideInInspector]
     public float timeoutSeconds = 6.0f;
 
     [Header("Status (read-only)")]
@@ -103,6 +100,31 @@ public class HapticGripCalibrationController : MonoBehaviour
         {
             calibrationState.ResetAll();
         }
+
+        ForceAllFingersToZero();
+        statusMessage = "キャリブレーションをリセットし、全指 0 を送信しました。";
+    }
+
+    private void ForceAllFingersToZero()
+    {
+        if (IsRunning)
+        {
+            CancelCalibration();
+        }
+
+        EnsureHoldTargets();
+        for (int i = 0; i < FingerCount; i++)
+        {
+            _holdTargets[i] = 0;
+        }
+
+        if (serialSender != null)
+        {
+            serialSender.TrySendNow(_holdTargets, bypassGuards: true);
+            ApplyHoldTargetsToSender();
+        }
+
+        statusMessage = "全指を 0 にリセットしました。";
     }
 
     private IEnumerator CalibrationRoutine()
@@ -111,7 +133,7 @@ public class HapticGripCalibrationController : MonoBehaviour
         _wasCancelled = false;
         currentFingerIndex = -1;
         currentServoValue = 0;
-        statusMessage = "キャリブレーション中は軽く握った状態を維持してください。";
+        statusMessage = "写真のように握った状態を維持していてください。";
 
         _previousSenderEnableSend = serialSender.enableSend;
         serialSender.enableSend = false;
@@ -121,7 +143,9 @@ public class HapticGripCalibrationController : MonoBehaviour
             calibrationState.ResetAll();
         }
 
-        GetSweepRangeAscending(out int start, out int end, out int step);
+        int start = 0;
+        int end = 1000;
+        int step = Mathf.Max(1, stepSize);
         EnsureScratchTargets();
         EnsureHoldTargets();
         for (int i = 0; i < FingerCount; i++)
@@ -137,7 +161,7 @@ public class HapticGripCalibrationController : MonoBehaviour
         {
             for (int s = initialCountdownSeconds; s >= 1; s--)
             {
-                statusMessage = $"キャリブレーション中は軽く握った状態を維持してください。\n開始まで {s}";
+                statusMessage = $"写真のように握った状態を維持していてください。\n開始まで {s}";
                 yield return new WaitForSecondsRealtime(1f);
                 if (_wasCancelled) yield break;
             }
@@ -310,11 +334,11 @@ public class HapticGripCalibrationController : MonoBehaviour
 
             if (anySavedThisStep)
             {
-                statusMessage = $"キャリブレーション中は軽く握った状態を維持してください。\n保存 {afterSavedCount}/{FingerCount}（最新: {FingerNameJapanese(currentFingerIndex)}）";
+                statusMessage = $"写真のように握った状態を維持していてください。\n保存 {afterSavedCount}/{FingerCount}（最新: {FingerNameJapanese(currentFingerIndex)}）";
             }
             else
             {
-                statusMessage = $"キャリブレーション中は軽く握った状態を維持してください。\n進捗 {afterSavedCount}/{FingerCount}  現在 {clamped}";
+                statusMessage = $"写真のように握った状態を維持していてください。\n進捗 {afterSavedCount}/{FingerCount}  現在 {clamped}";
             }
         }
     }
@@ -330,7 +354,7 @@ public class HapticGripCalibrationController : MonoBehaviour
         if (serialSender != null)
         {
             EnsureScratchTargets();
-            GetSweepRangeAscending(out int start, out _, out _);
+            int start = 0;
             EnsureHoldTargets();
 
             if (_wasCancelled)
@@ -399,19 +423,6 @@ public class HapticGripCalibrationController : MonoBehaviour
         for (int i = 0; i < FingerCount; i++)
         {
             serialSender.currentFingerTargets[i] = _holdTargets[i];
-        }
-    }
-
-    private void GetSweepRangeAscending(out int start, out int end, out int step)
-    {
-        step = Mathf.Max(1, stepSize);
-        start = Clamp1000(startServoValue);
-        end = Clamp1000(endServoValue);
-        if (end < start)
-        {
-            int tmp = start;
-            start = end;
-            end = tmp;
         }
     }
 
