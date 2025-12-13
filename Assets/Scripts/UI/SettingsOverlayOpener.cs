@@ -19,6 +19,9 @@ public class SettingsOverlayOpener : MonoBehaviour
     [SerializeField] private bool pauseTimeOnOpen = true;
     [SerializeField] private bool unlockCursorOnOpen = true;
 
+    [Tooltip("true のとき、設定を開いても Time.timeScale を変更しない（既定: 停止しない）")]
+    [SerializeField] private bool disableTimePausing = true;
+
     [Header("Events")]
     public UnityEvent onOpen;
     public UnityEvent onClose;
@@ -78,7 +81,8 @@ public class SettingsOverlayOpener : MonoBehaviour
         if (panelRoot != null) panelRoot.SetActive(active);
         if (hintRoot != null) hintRoot.SetActive(!active);
 
-        if (pauseTimeOnOpen)
+        bool shouldPauseTime = pauseTimeOnOpen && !disableTimePausing;
+        if (shouldPauseTime)
         {
             if (active && !wasActive)
             {

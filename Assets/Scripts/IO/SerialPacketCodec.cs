@@ -28,7 +28,12 @@ public static class SerialPacketCodec
         values = new int[5];
         for (int i = 0; i < 5; i++)
         {
-            values[i] = int.Parse(m.Groups[i + 1].Value);
+            if (!int.TryParse(m.Groups[i + 1].Value, out int parsed))
+            {
+                values = null;
+                return false;
+            }
+            values[i] = parsed < 0 ? 0 : (parsed > 1000 ? 1000 : parsed);
         }
         return true;
     }
