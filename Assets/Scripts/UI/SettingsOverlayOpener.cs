@@ -19,6 +19,9 @@ public class SettingsOverlayOpener : MonoBehaviour
     [SerializeField] private bool pauseTimeOnOpen = true;
     [SerializeField] private bool unlockCursorOnOpen = true;
 
+    [Tooltip("true のとき、設定を開いても Time.timeScale を変更しない（既定: 停止しない）")]
+    [SerializeField] private bool disableTimePausing = true;
+
     [Header("Events")]
     public UnityEvent onOpen;
     public UnityEvent onClose;
@@ -28,6 +31,8 @@ public class SettingsOverlayOpener : MonoBehaviour
     private bool _savedVisible;
     private RenderMode _savedRenderMode;
     private bool _canvasSaved;
+
+    public bool IsOpen => panelRoot != null && panelRoot.activeSelf;
 
     private void Start()
     {
@@ -73,32 +78,36 @@ public class SettingsOverlayOpener : MonoBehaviour
 
     private void SetPanelActive(bool active)
     {
+        bool wasActive = panelRoot != null && panelRoot.activeSelf;
+
         if (panelRoot != null) panelRoot.SetActive(active);
         if (hintRoot != null) hintRoot.SetActive(!active);
 
-        if (pauseTimeOnOpen)
+        bool shouldPauseTime = pauseTimeOnOpen && !disableTimePausing;
+        if (shouldPauseTime)
         {
-            if (active)
+            if (active && !wasActive)
             {
                 _savedTimeScale = Time.timeScale;
                 Time.timeScale = 0f;
             }
-            else
+            else if (!active && wasActive)
             {
-                Time.timeScale = _savedTimeScale;
+                // 0 が保存されている場合でも再開できるように 1f にフォールバック
+                Time.timeScale = _savedTimeScale > 0f ? _savedTimeScale : 1f;
             }
         }
 
         if (unlockCursorOnOpen)
         {
-            if (active)
+            if (active && !wasActive)
             {
                 _savedLock = Cursor.lockState;
                 _savedVisible = Cursor.visible;
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
             }
-            else
+            else if (!active && wasActive)
             {
                 Cursor.lockState = _savedLock;
                 Cursor.visible = _savedVisible;
@@ -107,13 +116,13 @@ public class SettingsOverlayOpener : MonoBehaviour
 
         if (targetCanvas != null)
         {
-            if (active)
+            if (active && !wasActive)
             {
                 _savedRenderMode = targetCanvas.renderMode;
                 _canvasSaved = true;
                 targetCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
             }
-            else if (_canvasSaved)
+            else if (!active && wasActive && _canvasSaved)
             {
                 targetCanvas.renderMode = _savedRenderMode;
             }

@@ -25,6 +25,13 @@ public static class FitPianoKeyColliders
             var mr = t.GetComponent<MeshRenderer>();
             if (!mr) continue;
 
+            // 接触管理スクリプトを付与（Collisionベース）
+            if (t.GetComponent<PianoKey>() != null && t.GetComponent<PianoKeyFingerContactReporter>() == null)
+            {
+                var reporter = t.gameObject.AddComponent<PianoKeyFingerContactReporter>();
+                EditorUtility.SetDirty(reporter);
+            }
+
             // 既存のコライダーをすべて除去（前回実行で増えた分もリセット）
             foreach (var oldBc in t.GetComponents<BoxCollider>())
                 Object.DestroyImmediate(oldBc, true);

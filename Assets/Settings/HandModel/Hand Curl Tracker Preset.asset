@@ -15,4 +15,4 @@ MonoBehaviour:
   useFiltering: 1
   filterAlpha: 0.9
   snapThreshold: 0.35
-  noiseThreshold: 0.013
+  noiseThreshold: 0.008

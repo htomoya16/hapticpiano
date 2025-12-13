@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using Valve.VR.InteractionSystem;
 
@@ -23,9 +22,6 @@ public class HandCurlTracker : MonoBehaviour
 
     [Tooltip("フィルタ後の curl 値（0〜1, 親指〜小指）")]
     [SerializeField] public float[] curl01 = new float[FingerCount];
-
-    [Tooltip("ForceFeedback 用に 0〜1000 に変換した curl 値（親指〜小指）")]
-    [SerializeField] public short[] curlFfb = new short[FingerCount];
 
     [Header("Filtering")]
     [Tooltip("true のとき curlRaw にローパスフィルタをかけて curl01 を更新する。false ならフィルタなし。")]
@@ -80,64 +76,17 @@ public class HandCurlTracker : MonoBehaviour
     }
 
     /// <summary>
-    /// LucidGloves から届いた 1 フレーム分のエンコード文字列
-    /// （例: A2301B2391C3431D3313E1234）をパースして sensorRaw を更新する。
-    /// シリアル受信側のコンポーネントから呼び出すことを想定。
+    /// デコード済みのセンサ値（A〜E, 0〜4095）を受け取り、sensorRaw を更新する。
     /// </summary>
-    public void UpdateSensorFromEncodedString(string encoded)
+    public void UpdateSensorFromDecodedValues(int[] decodedValues)
     {
-        if (string.IsNullOrEmpty(encoded))
-        {
-            return;
-        }
+        if (decodedValues == null || decodedValues.Length != FingerCount) return;
 
         EnsureSensorArrays();
-
-        int length = encoded.Length;
-        int index = 0;
-
-        while (index < length)
+        for (int i = 0; i < FingerCount; i++)
         {
-            char c = encoded[index];
-            int fingerIndex = FingerCharToIndex(c);
-            if (fingerIndex < 0)
-            {
-                index++;
-                continue;
-            }
-
-            // 直後の数字列を取得
-            index++;
-            int start = index;
-            while (index < length && char.IsDigit(encoded[index]))
-            {
-                index++;
-            }
-
-            if (index == start)
-            {
-                // 数字が 1 桁も無い場合はスキップ
-                continue;
-            }
-
-            string numberStr = encoded.Substring(start, index - start);
-            if (int.TryParse(numberStr, out int value))
-            {
-                sensorRaw[fingerIndex] = value;
-            }
+            sensorRaw[i] = decodedValues[i];
         }
-    }
-
-    // 現在の curlFfb から VRFFBInput を構築して返すヘルパーである。
-    public VRFFBInput GetCurrentFfbInput()
-    {
-        return new VRFFBInput(
-            curlFfb[0],
-            curlFfb[1],
-            curlFfb[2],
-            curlFfb[3],
-            curlFfb[4]
-        );
     }
 
     // プリセット適用ヘルパー（左右共通値で揃える）
@@ -204,11 +153,6 @@ public class HandCurlTracker : MonoBehaviour
 
             cFiltered = Mathf.Clamp01(cFiltered);
             curl01[i] = cFiltered;
-
-            // FFB 側と互換性を保つため、
-            // 1000 = 指が開いている / 0 = 完全に握っている、という向きに反転する。
-            short ffbValue = (short)(1000 - Mathf.RoundToInt(cFiltered * 1000f));
-            curlFfb[i] = ffbValue;
         }
     }
 
@@ -224,10 +168,6 @@ public class HandCurlTracker : MonoBehaviour
             curl01 = new float[FingerCount];
         }
 
-        if (curlFfb == null || curlFfb.Length != FingerCount)
-        {
-            curlFfb = new short[FingerCount];
-        }
     }
 
     private void EnsureSensorArrays()
@@ -245,19 +185,6 @@ public class HandCurlTracker : MonoBehaviour
         return Mathf.Clamp01(c);
     }
 
-    private int FingerCharToIndex(char c)
-    {
-        switch (char.ToUpperInvariant(c))
-        {
-            case 'A': return 0; // Thumb
-            case 'B': return 1; // Index
-            case 'C': return 2; // Middle
-            case 'D': return 3; // Ring
-            case 'E': return 4; // Pinky
-            default:  return -1;
-        }
-    }
-
     // Skeleton 依存のリセット処理は削除し、
-    // curl01 / curlFfb は UpdateFromSensor 側で常に上書き更新する方針とする。
+    // curl01 は UpdateFromSensor 側で常に上書き更新する方針とする。
 }

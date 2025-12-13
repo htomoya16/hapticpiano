@@ -2,14 +2,14 @@ using UnityEngine;
 using Valve.VR.InteractionSystem;
 
 /// <summary>
-/// HandSerialInput が K フラグ（キャリブレーション中）を受信している間、
+/// HandSensorReceiver が K フラグ（キャリブレーション中）を受信している間、
 /// VR 上の手の位置・向きを凍結するコンポーネントである。
 /// </summary>
 public class HandFreezeOnCalibrate : MonoBehaviour
 {
     [Header("References")]
-    [Tooltip("K フラグを監視する HandSerialInput")]
-    public HandSerialInput serialInput;
+    [Tooltip("K フラグを監視する HandSensorReceiver")]
+    public HandSensorReceiver sensorReceiver;
 
     [Tooltip("凍結対象の Transform（通常は Hand が付いているルートオブジェクト）")]
     public Transform handRoot;
@@ -34,7 +34,7 @@ public class HandFreezeOnCalibrate : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (serialInput == null || handRoot == null)
+        if (sensorReceiver == null || handRoot == null)
         {
             isFrozen = false;
             _hasFrozenPose = false;
@@ -42,7 +42,7 @@ public class HandFreezeOnCalibrate : MonoBehaviour
             return;
         }
 
-        bool nowCalibrating = serialInput.isCalibrating;
+        bool nowCalibrating = sensorReceiver.isCalibrating;
 
         // キャリブレーション開始時に現在の姿勢を記録
         if (nowCalibrating && !_wasCalibrating)

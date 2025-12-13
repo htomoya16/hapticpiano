@@ -21,6 +21,9 @@
 - [feature/piano-key-collider.md](feature/piano-key-collider.md)
 - [feature/hand-curl-tuning.md](feature/hand-curl-tuning.md)
 - [feature/hand-kinematics.md](feature/hand-kinematics.md)
+- [feature/haptics-serial-calibration.md](feature/haptics-serial-calibration.md)
+- [feature/haptics-runtime-feedback.md](feature/haptics-runtime-feedback.md)
+- [feature/piano-haptics-integration.md](feature/piano-haptics-integration.md)
 
 今後 piano / haptics / evaluation などの機能が増えた場合も、この階層に追加する。
 
@@ -37,6 +40,8 @@
 - [story/hand-kinematics-pc1-data.md](story/hand-kinematics-pc1-data.md)
 - [story/hand-kinematics-tuning-pc1-curve.md](story/hand-kinematics-tuning-pc1-curve.md)
 - [story/hand-curl-filtering-noise-reduction.md](story/hand-curl-filtering-noise-reduction.md)
+- [story/haptics-serial-calibration.md](story/haptics-serial-calibration.md)
+- [story/haptics-runtime-feedback-piano-mode.md](story/haptics-runtime-feedback-piano-mode.md)
 
 story は「今回のタスクで何をもって完了とするか」を定義する。
 
