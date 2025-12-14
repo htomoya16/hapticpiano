@@ -44,6 +44,9 @@ public sealed class PianoKeySolfegeLabeler : MonoBehaviour
     [Tooltip("生成対象の最大ノート（例: G4）。")]
     public string maxNoteName = "G4";
 
+    [Tooltip("鍵盤側のノート名に対するオクターブ補正（表示＆範囲判定に適用）。例: -1 にすると C5 を C4 として扱い、C4〜G4指定で1オクターブ上（C5〜G5）の鍵にラベルが付く。")]
+    public int octaveNumberOffset = 0;
+
     [Tooltip("オクターブ番号（例: 4）も表示する")]
     public bool showOctaveNumber = false;
 
@@ -93,8 +96,9 @@ public sealed class PianoKeySolfegeLabeler : MonoBehaviour
         int? maxMidi = null;
         if (limitToNoteRange)
         {
-            if (TryParseNoteNameToMidi(minNoteName, out int mn)) minMidi = mn;
-            if (TryParseNoteNameToMidi(maxNoteName, out int mx)) maxMidi = mx;
+            // min/max は「表示したいノート名」（補正なし）として扱う。
+            if (TryParseNoteNameToMidi(minNoteName, 0, out int mn)) minMidi = mn;
+            if (TryParseNoteNameToMidi(maxNoteName, 0, out int mx)) maxMidi = mx;
             if (minMidi.HasValue && maxMidi.HasValue && maxMidi.Value < minMidi.Value)
             {
                 var t = minMidi.Value;
@@ -134,7 +138,8 @@ public sealed class PianoKeySolfegeLabeler : MonoBehaviour
 
     private TMP_Text CreateLabelForKey(PianoKey key, string text)
     {
-        var go = new GameObject($"Label_{key.NoteName}");
+        string labelName = $"Label_{FormatNoteNameWithOctaveOffset(key.NoteName)}";
+        var go = new GameObject(labelName);
 
         if (labelsRoot != null)
         {
@@ -257,19 +262,20 @@ public sealed class PianoKeySolfegeLabeler : MonoBehaviour
             sharpSuffix = useSharpSymbol ? "♯" : "#";
         }
 
+        if (octave >= 0) octave += octaveNumberOffset;
         string octaveSuffix = (showOctaveNumber && octave >= 0) ? octave.ToString() : "";
         return baseSolfege + sharpSuffix + octaveSuffix;
     }
 
     private bool IsInMidiRange(string noteName, int? minMidi, int? maxMidi)
     {
-        if (!TryParseNoteNameToMidi(noteName, out int v)) return false;
+        if (!TryParseNoteNameToMidi(noteName, octaveNumberOffset, out int v)) return false;
         if (minMidi.HasValue && v < minMidi.Value) return false;
         if (maxMidi.HasValue && v > maxMidi.Value) return false;
         return true;
     }
 
-    private static bool TryParseNoteNameToMidi(string noteName, out int midi)
+    private static bool TryParseNoteNameToMidi(string noteName, int octaveOffset, out int midi)
     {
         midi = 0;
         if (string.IsNullOrWhiteSpace(noteName)) return false;
@@ -294,10 +300,28 @@ public sealed class PianoKeySolfegeLabeler : MonoBehaviour
         if (octaveIndex >= noteName.Length) return false;
 
         if (!int.TryParse(noteName.Substring(octaveIndex), out int octave)) return false;
+        octave += octaveOffset;
+        if (octave < 0) return false;
 
-        // MIDI: C4 = 60（octave 4 は 5番目の C なので +1）
+        // NAudio の表記: C0 = 0, C5 = 60
         int semitone = semitoneBase + (sharp ? 1 : 0);
-        midi = (octave + 1) * 12 + semitone;
+        midi = octave * 12 + semitone;
         return true;
+    }
+
+    private string FormatNoteNameWithOctaveOffset(string noteName)
+    {
+        if (string.IsNullOrEmpty(noteName)) return noteName ?? "";
+
+        char letter = noteName[0];
+        bool sharp = noteName.Length >= 2 && noteName[1] == '#';
+        int octaveIndex = sharp ? 2 : 1;
+        if (octaveIndex >= noteName.Length) return noteName;
+
+        if (!int.TryParse(noteName.Substring(octaveIndex), out int octave)) return noteName;
+        octave += octaveNumberOffset;
+        if (octave < 0) octave = 0;
+
+        return sharp ? $"{letter}#{octave}" : $"{letter}{octave}";
     }
 }

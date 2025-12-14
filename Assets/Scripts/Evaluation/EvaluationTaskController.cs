@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.IO;
 using UnityEngine;
 
@@ -57,6 +58,10 @@ public sealed class EvaluationTaskController : MonoBehaviour
     public string twinkleMidiFileNameNoExt = "twinkle_twinkle_60bpm_12bars";
     public bool logTwinkleTargets = true;
 
+    [Header("Training Demo")]
+    [Tooltip("デモ（きらきら星）をボタン押下後に開始するまでの遅延（秒）。")]
+    public float trainingDemoDelaySeconds = 3f;
+
     [Header("Debug")]
     public bool enableKeyboardShortcuts = true;
 
@@ -79,6 +84,9 @@ public sealed class EvaluationTaskController : MonoBehaviour
     // Haptics override (per task)
     private bool _hapticsOverridden;
     private bool[] _prevHapticEnableSend;
+
+    private Coroutine _trainingDemoCoroutine;
+    private int _trainingDemoToken;
 
     public bool IsTaskRunning => _mode != Mode.None;
     public string ActiveTaskId => _mode == Mode.Accuracy ? "accuracy" : _mode == Mode.Twinkle ? "twinkle" : "none";
@@ -150,15 +158,56 @@ public sealed class EvaluationTaskController : MonoBehaviour
         }
 
         StopCurrentTask();
+        CancelTrainingDemo();
 
+        float delay = Mathf.Max(0f, trainingDemoDelaySeconds);
+        if (delay <= 0f)
+        {
+            StartTrainingDemoNow();
+            return;
+        }
+
+        _trainingDemoToken++;
+        int token = _trainingDemoToken;
+        _trainingDemoCoroutine = StartCoroutine(TrainingDemoAfterDelay(token, delay));
+    }
+
+    private IEnumerator TrainingDemoAfterDelay(int token, float delaySeconds)
+    {
+        float end = Time.realtimeSinceStartup + delaySeconds;
+        while (Time.realtimeSinceStartup < end)
+        {
+            if (token != _trainingDemoToken) yield break;
+            yield return null;
+        }
+
+        if (token != _trainingDemoToken) yield break;
+        StartTrainingDemoNow();
+        _trainingDemoCoroutine = null;
+    }
+
+    private void StartTrainingDemoNow()
+    {
+        if (midiPlayer == null) return;
         midiPlayer.KeyMode = KeyMode.ForShow;
         midiPlayer.PlaySongByFileName(twinkleMidiFileNameNoExt, speed: 1f, details: "Training Demo", loop: false);
+    }
+
+    private void CancelTrainingDemo()
+    {
+        _trainingDemoToken++;
+        if (_trainingDemoCoroutine != null)
+        {
+            StopCoroutine(_trainingDemoCoroutine);
+            _trainingDemoCoroutine = null;
+        }
     }
 
     [ContextMenu("Eval/Start Accuracy Task")]
     public void StartAccuracyTask()
     {
         StopCurrentTask();
+        CancelTrainingDemo();
         EnsureSession();
         HasParticipantInfoLocked = true;
         HasRunAnyTask = true;
@@ -181,6 +230,7 @@ public sealed class EvaluationTaskController : MonoBehaviour
     public void StartTwinkleTask()
     {
         StopCurrentTask();
+        CancelTrainingDemo();
         EnsureSession();
         HasParticipantInfoLocked = true;
         HasRunAnyTask = true;
@@ -219,6 +269,8 @@ public sealed class EvaluationTaskController : MonoBehaviour
     [ContextMenu("Eval/Stop Current Task")]
     public void StopCurrentTask()
     {
+        CancelTrainingDemo();
+
         // カウントダウン中ならキャンセルする（手順は進めない）
         if (isCountingDown && _mode == Mode.None && _activeTask == null)
         {

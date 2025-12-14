@@ -7571,6 +7571,71 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1347453731}
   m_CullTransparentMesh: 1
+--- !u!1 &1391860849
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1391860851}
+  - component: {fileID: 1391860852}
+  m_Layer: 0
+  m_Name: PianoKeySolfegeLabeler
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1391860851
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391860849}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1391860852
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1391860849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7b0c2d5f7b2f2ab41a4f2a2ce8b18a21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  piano: {fileID: 533664310}
+  labelsRoot: {fileID: 202646035}
+  enableLabels: 1
+  fontAsset: {fileID: 0}
+  autoFindFontAssetByName: 1
+  fontAssetName: MSGOTHIC 1 SDF
+  includeSharps: 0
+  limitToNoteRange: 1
+  minNoteName: C4
+  maxNoteName: G4
+  showOctaveNumber: 0
+  useSharpSymbol: 0
+  textColor: {r: 0.10849059, g: 0.19442149, b: 1, a: 1}
+  placementMode: 0
+  boundsWorldUpOffset: 0.002
+  localOffset: {x: 0, y: 0.0003, z: -0.0003}
+  localEuler: {x: 45, y: 0, z: 0}
+  localScale: {x: 0.02, y: 0.02, z: 0.02}
+  fontSize: 12
+  alignment: 514
+  rebuildOnStart: 1
 --- !u!1 &1394947629
 GameObject:
   m_ObjectHideFlags: 0
@@ -21073,6 +21138,7 @@ SceneRoots:
   m_Roots:
   - {fileID: 1656088025}
   - {fileID: 533664311}
+  - {fileID: 1391860851}
   - {fileID: 7788305021743738881}
   - {fileID: 1686136607}
   - {fileID: 931182694}
