@@ -66,8 +66,8 @@ public sealed class EvaluationCountdownWorldUI : MonoBehaviour
             canvas.transform.rotation = Quaternion.LookRotation(canvas.transform.position - targetCamera.transform.position, Vector3.up);
         }
 
-        bool showCountdown = showCountdownWhileActive && evaluation.IsCountdownActive;
-        bool showCurrent = showCurrentTaskWhileRunning && evaluation.IsTaskRunning;
+        bool showCountdown = showCountdownWhileActive && (evaluation.IsCountdownActive || evaluation.IsTaskIntroActive);
+        bool showCurrent = showCurrentTaskWhileRunning && (evaluation.IsTaskRunning || evaluation.IsTaskIntroActive);
 
         // Visibility & texts
         if (taskDescriptionText != null) taskDescriptionText.gameObject.SetActive(showCountdown);
@@ -76,14 +76,23 @@ public sealed class EvaluationCountdownWorldUI : MonoBehaviour
 
         if (showCountdown)
         {
-            int sec = Mathf.CeilToInt(Mathf.Max(0f, evaluation.CountdownRemainingSeconds));
-            if (taskDescriptionText != null) taskDescriptionText.text = evaluation.GetNextScheduleStepDescriptionJa();
+            float remain = evaluation.IsCountdownActive ? evaluation.CountdownRemainingSeconds : evaluation.TaskIntroRemainingSeconds;
+            int sec = Mathf.CeilToInt(Mathf.Max(0f, remain));
+
+            if (taskDescriptionText != null)
+            {
+                taskDescriptionText.text = evaluation.IsCountdownActive
+                    ? evaluation.GetNextScheduleStepDescriptionJa()
+                    : evaluation.GetTaskIntroDescriptionJa();
+            }
+
             if (countdownText != null) countdownText.text = $"開始まで {sec} 秒";
         }
 
         if (showCurrent)
         {
-            string taskJa = evaluation.ActiveTaskId == "accuracy" ? "打鍵精度" : evaluation.ActiveTaskId == "twinkle" ? "きらきら星" : evaluation.ActiveTaskId;
+            string tid = evaluation.CurrentOrIntroTaskId;
+            string taskJa = tid == "accuracy" ? "打鍵精度" : tid == "twinkle" ? "きらきら星" : tid;
             string condJa = evaluation.condition == EvaluationCondition.TouchOn ? "触覚あり" : "触覚なし";
             if (currentTaskText != null) currentTaskText.text = $"{taskJa} / {condJa}";
         }

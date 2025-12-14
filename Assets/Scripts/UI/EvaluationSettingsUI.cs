@@ -49,11 +49,6 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     [Range(0.1f, 1f)]
     public float buttonPressedMultiplier = 0.9f;
 
-    [Tooltip("停止ボタンのルート（実行中/カウントダウン中のみ表示したい場合に設定）")]
-    public GameObject stopButtonRoot;
-    [Tooltip("停止ボタン（実行中/カウントダウン中のみ押せるようにしたい場合に設定）")]
-    public Button stopButton;
-
     [Header("Behavior")]
     [Tooltip("ボタン操作後に設定画面を閉じる")]
     public bool closeOverlayAfterAction = true;
@@ -65,6 +60,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     private bool _prevLocked;
     private bool _prevCountdownActive;
     private bool _prevTaskRunning;
+    private bool _prevIntroActive;
 
     private void Start()
     {
@@ -78,6 +74,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         {
             _prevCountdownActive = evaluation.IsCountdownActive;
             _prevTaskRunning = evaluation.IsTaskRunning;
+            _prevIntroActive = evaluation.IsTaskIntroActive;
         }
     }
 
@@ -90,6 +87,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         {
             _prevCountdownActive = evaluation.IsCountdownActive;
             _prevTaskRunning = evaluation.IsTaskRunning;
+            _prevIntroActive = evaluation.IsTaskIntroActive;
         }
     }
 
@@ -99,13 +97,16 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
         bool countdownActive = evaluation.IsCountdownActive;
         bool taskRunning = evaluation.IsTaskRunning;
+        bool introActive = evaluation.IsTaskIntroActive;
         bool startedCountdown = countdownActive && !_prevCountdownActive;
         bool startedTask = taskRunning && !_prevTaskRunning;
+        bool startedIntro = introActive && !_prevIntroActive;
         _prevCountdownActive = countdownActive;
         _prevTaskRunning = taskRunning;
+        _prevIntroActive = introActive;
 
         // デモ/タスク開始時に設定画面を自動で閉じたい（ただし実行中に開いた場合は閉じない）
-        if ((startedCountdown || startedTask) && overlayOpener != null && overlayOpener.IsOpen)
+        if ((startedCountdown || startedIntro || startedTask) && overlayOpener != null && overlayOpener.IsOpen)
         {
             overlayOpener.Close();
         }
@@ -118,7 +119,6 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         }
 
         ApplyTaskButtonState();
-        ApplyStopButtonState();
     }
 
     private void OnDisable()
@@ -133,7 +133,6 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         _prevLocked = evaluation.HasParticipantInfoLocked;
         ApplyIdNameLockState(_prevLocked);
         ApplyTaskButtonState();
-        ApplyStopButtonState();
 
         if (participantIdInput != null)
         {
@@ -153,7 +152,8 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
         if (statusText != null)
         {
-            string group = evaluation.group == EvaluationGroup.A ? "A（順序: no→yes / yes→no）" : "B（順序: yes→no / no→yes）";
+            string groupCore = evaluation.group == EvaluationGroup.A ? "A（順序: no→yes / yes→no）" : "B（順序: yes→no / no→yes）";
+            string group = evaluation.HasExplicitGroupSelection ? groupCore : $"(未選択) {groupCore}";
             bool isTouchOn = evaluation.condition == EvaluationCondition.TouchOn;
             string cond = isTouchOn ? "touch_on" : "touch_off";
             string task = evaluation.IsTaskRunning ? evaluation.ActiveTaskId : "none";
@@ -240,6 +240,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         if (evaluation == null) return;
         if (evaluation.HasParticipantInfoLocked) return;
         evaluation.group = EvaluationGroup.A;
+        evaluation.MarkGroupSelected();
         evaluation.ResetSchedule();
         SetConditionTouchOff(); // A は最初が touch_off
     }
@@ -249,22 +250,9 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         if (evaluation == null) return;
         if (evaluation.HasParticipantInfoLocked) return;
         evaluation.group = EvaluationGroup.B;
+        evaluation.MarkGroupSelected();
         evaluation.ResetSchedule();
         SetConditionTouchOn(); // B は最初が touch_on
-    }
-
-    public void StartAccuracyTask()
-    {
-        if (evaluation == null) return;
-        evaluation.StartAccuracyTask();
-        AfterAction(forceCloseOverlay: true);
-    }
-
-    public void StartTwinkleTask()
-    {
-        if (evaluation == null) return;
-        evaluation.StartTwinkleTask();
-        AfterAction(forceCloseOverlay: true);
     }
 
     public void PlayTrainingDemoOnce()
@@ -274,12 +262,11 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         AfterAction(forceCloseOverlay: true);
     }
 
-    public void StopTask()
+    public void PlayAccuracyPatternDemoOnce()
     {
         if (evaluation == null) return;
-        if (!CanStopNow()) return;
-        evaluation.StopCurrentTask();
-        AfterAction();
+        evaluation.PlayAccuracyPatternDemoOnce();
+        AfterAction(forceCloseOverlay: true);
     }
 
     /// <summary>
@@ -315,7 +302,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
     private bool CanStopNow()
     {
-        return evaluation != null && (evaluation.IsTaskRunning || evaluation.IsCountdownActive);
+        return evaluation != null && (evaluation.IsTaskRunning || evaluation.IsCountdownActive || evaluation.IsTaskIntroActive);
     }
 
     private bool CanStartNow()
@@ -323,6 +310,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         if (evaluation == null) return false;
         if (!evaluation.useGroupSchedule) return false;
         if (evaluation.IsTaskRunning || evaluation.IsCountdownActive) return false;
+        if (!evaluation.HasExplicitGroupSelection) return false;
         return evaluation.GetScheduleIndex() < evaluation.GetScheduleLength();
     }
 
@@ -365,27 +353,17 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         colors.pressedColor = MultiplyRgb(baseColor, buttonPressedMultiplier);
         colors.selectedColor = colors.highlightedColor;
         colors.disabledColor = taskDoneButtonColor;
+        // Inspector 側で colorMultiplier が低いと、押せるのに暗く見えることがあるため固定。
+        colors.colorMultiplier = 1f;
         b.colors = colors;
+
+        // ColorTint の場合に確実に反映させたい（targetGraphic の初期色が暗い/透明なケース対策）
+        if (b.targetGraphic != null) b.targetGraphic.color = colors.normalColor;
     }
 
     private static Color MultiplyRgb(Color c, float m)
     {
         return new Color(Mathf.Clamp01(c.r * m), Mathf.Clamp01(c.g * m), Mathf.Clamp01(c.b * m), c.a);
-    }
-
-    private void ApplyStopButtonState()
-    {
-        bool canStop = CanStopNow();
-        if (stopButtonRoot != null)
-        {
-            if (stopButtonRoot.activeSelf != canStop) stopButtonRoot.SetActive(canStop);
-        }
-
-        if (stopButton != null)
-        {
-            stopButton.interactable = canStop;
-            if (stopButton.gameObject.activeSelf != canStop) stopButton.gameObject.SetActive(canStop);
-        }
     }
 
     private void BindListenersIfNeeded()

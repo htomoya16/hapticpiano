@@ -31,8 +31,10 @@
 ### 1) 主要評価：打鍵精度タスク（Accuracy）
 - テンポ：**60 BPM**（メトロノーム）
 - 1拍＝1試行（trial）として扱う
-- ターゲット系列（反復）
-  - `C4 → D4 → E4 → F4 → G4 → F4 → E4 → D4 → C4`
+- ターゲット系列（「ドレミファソラシドシラソファミレド」を1往復として3セット）
+  - 1セット目：`C4 → D4 → E4 → F4 → G4 → A4 → B4 → C5 → B4 → A4 → G4 → F4 → E4 → D4 → C4`
+  - 2セット目以降：先頭のドを除外して連結（`D4 → E4 → ... → D4 → C4`）
+  - 60 BPM の場合：1セット目=15拍、2-3セット目=各14拍、合計43拍=43秒
 - 各拍で **正解鍵を光らせる**（ガイド提示）
 - ログを取得する
 
@@ -51,18 +53,49 @@
 - インターバル中は VR 内に「次のタスク説明」と「開始までのカウントダウン」を表示する。
 
 ## ログ設計（CSV）
-ログは `persistentDataPath` 配下へ保存し、解析にそのまま使える CSV とする。
+ログは `Application.persistentDataPath` 配下へ保存し、解析にそのまま使える CSV とする。
 
-1) タスク単位（1行）
-- `start_time,end_time,participant_id,condition,task`
+### 保存先
+- `Application.persistentDataPath/EvaluationLogs/<participant_id>/<run_id>/`
+  - `<run_id>` は UTC の `yyyyMMdd_HHmmss` で自動生成する。
 
-2) 正解側（trial/拍ごと）
-- `trial_index,beat_time,target_key`
+### ファイル構成
+- `session_meta.csv`（セッションのメタ情報）
+  - 何のため：このフォルダ一式が「誰の」「どの順序割当（A/B）」の記録かを残す
+  - いつ出る：ログフォルダ作成時（最初のタスク開始でセッション生成されたとき）
+  - カラム：`created_time,participant_id,participant_name,group`
+- `task_summary.csv`（タスクの要約：タスク1回=1行）
+  - 何のため：タスクの開始/終了、条件、タスク種別の一覧（全体のインデックス）
+  - いつ出る：各タスク終了時（中止/自動終了を含む）
+  - カラム：`start_time,end_time,participant_id,condition,task`
+- `{task}_{condition}_{task_instance_id}_trials.csv`（正解ターゲット：trial=1行）
+  - 何のため：ガイドとして提示した「正解ターゲット」の時系列
+  - いつ出る：各タスク開始時にファイル作成され、trialのたびに追記
+  - カラム：`trial_index,beat_time,target_key`
+- `{task}_{condition}_{task_instance_id}_presses.csv`（実入力：押下=1行）
+  - 何のため：実際に押されたキーの時系列
+  - いつ出る：各タスク開始時にファイル作成され、押下のたびに追記
+  - カラム：`press_time,pressed_key`
 
-3) 実際の入力側（押下イベント）
-- `press_time,pressed_key`
+補足（ファイル名の意味）
+- `task`：`accuracy` / `twinkle`
+- `condition`：`touch_off` / `touch_on`
+- `task_instance_id`：同一セッション内で複数回タスクを回したときに、ファイル名が衝突しないよう付与する一意ID（UTC）
 
-補足：被験者の「表示名」を入力した場合は、セッション単位のメタ情報として `session_meta.csv` に保存する（解析の主キーは `participant_id` を維持する）。
+ファイル名の例
+- `accuracy_touch_off_20251214_123456_123_trials.csv`
+- `accuracy_touch_off_20251214_123456_123_presses.csv`
+
+### trials / presses の意味
+- `*_trials.csv`：その時点で提示した「正解ターゲット」側（Accuracy は拍、Twinkle はノート）
+- `*_presses.csv`：実際の押下イベント側（押した時刻＋押したキー）
+
+### 時刻の基準
+- すべて UTC（ISO 8601）で保存する。
+- `press_time`：鍵盤の物理押下判定が成立した瞬間（入力イベント発火タイミング）。
+- `beat_time`：
+  - Accuracy：メトロノームの「拍の開始」を狙った時刻（実装は realtime を UTC に変換）。
+  - Twinkle：MIDI ノートを「処理してガイド提示した」タイミング（厳密な音声再生時刻ではない）。
 
 ## 既存実装（参照）
 - タスク実行・ガイド・ログ：`Assets/Scripts/Evaluation/EvaluationTaskController.cs`

@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.IO;
+using System.Text;
 using UnityEngine;
 
 public enum EvaluationCondition
@@ -15,7 +16,8 @@ public enum EvaluationGroup
     B = 1,
 }
 
-public sealed class EvaluationTaskController : MonoBehaviour
+[DisallowMultipleComponent]
+public sealed partial class EvaluationTaskController : MonoBehaviour
 {
     private enum Mode
     {
@@ -32,6 +34,13 @@ public sealed class EvaluationTaskController : MonoBehaviour
     public EvaluationGroup group = EvaluationGroup.A;
     public EvaluationCondition condition = EvaluationCondition.TouchOn;
 
+    [Header("Setup Guard")]
+    [Tooltip("グループ（A/B）をユーザーが明示選択するまで、タスク開始を許可しない。")]
+    public bool requireExplicitGroupSelection = true;
+
+    [SerializeField, Tooltip("グループ（A/B）をボタンで選択済みか（実行中に変更不可）。")]
+    private bool hasExplicitGroupSelection;
+
     [Header("References")]
     public PianoKeyController piano;
     public MidiPlayer midiPlayer;
@@ -46,12 +55,28 @@ public sealed class EvaluationTaskController : MonoBehaviour
     [Header("Guide Light")]
     public Color guideKeyColour = new Color(1f, 0.92f, 0.2f, 1f);
 
+    [Tooltip("Accuracy タスクのガイドを『点灯→フェードアウト』させる秒数（0以下ならフェードなし）。")]
+    public float accuracyGuideFadeSeconds = 0.7f;
+
     [Header("Accuracy Task")]
     public float accuracyDurationSeconds = 30f;
+
+    [Tooltip("Accuracy のターゲット系列を『ドレミファソラシドシラソファミレド』に固定する（シーン側で誤って変更されても開始時に戻す）。")]
+    public bool forceFullScaleAccuracyPattern = true;
+
+    [Tooltip("ターゲット系列（譜面上の表記）。このプロジェクトでは C4=60 の表記（いわゆる Scientific Pitch）を前提に扱う。")]
     public string[] accuracyPattern = new[]
     {
-        "C4", "D4", "E4", "F4", "G4", "F4", "E4", "D4", "C4"
+        // ドレミファソラシドシラソファミレド
+        "C4", "D4", "E4", "F4", "G4", "A4", "B4", "C5", "B4", "A4", "G4", "F4", "E4", "D4", "C4"
     };
+
+    [Tooltip("Accuracy の往復セット数。2セット目以降は先頭（ド）を除外して連結する。")]
+    public int accuracySetCount = 3;
+
+    [Header("Note Name Mapping (Octave)")]
+    [Tooltip("鍵盤側のノート名（NAudio系の表記）→ログ/譜面側の表記へ変換するためのオクターブ補正。\n例: NAudio は C5=60 なので、C5 を C4 としてログに残すなら -1。\n0 の場合は変換しない。")]
+    public int noteOctaveOffset = -1;
 
     [Header("Twinkle Task")]
     [Tooltip("StreamingAssets/MIDI/<name>.mid の <name> を指定する（拡張子なし）。")]
@@ -62,36 +87,15 @@ public sealed class EvaluationTaskController : MonoBehaviour
     [Tooltip("デモ（きらきら星）をボタン押下後に開始するまでの遅延（秒）。")]
     public float trainingDemoDelaySeconds = 3f;
 
-    [Header("Debug")]
-    public bool enableKeyboardShortcuts = true;
+    [Header("UI Text")]
+    [Tooltip("次タスク説明の『表』表示で、タスク列の幅（PadRight）。")]
+    public int nextTaskTableTaskColumnWidth = 8;
 
-    private EvaluationLogSession _session;
-    private EvaluationLogTask _activeTask;
-    private Mode _mode = Mode.None;
+    [Tooltip("表表示を TMP の <mspace> で等幅化して、見た目のズレを減らす。")]
+    public bool nextTaskTableUseMonospaceTag = true;
 
-    private PianoKey _highlightedKey;
-
-    // Accuracy state
-    private float _taskStartRealtime;
-    private float _nextBeatRealtime;
-    private int _trialIndex;
-
-    // Twinkle state
-    private MidiNote[] _twinkleNotes;
-    private int _twinkleNoteIndex;
-    private float _twinkleTimerTicks;
-
-    // Haptics override (per task)
-    private bool _hapticsOverridden;
-    private bool[] _prevHapticEnableSend;
-
-    private Coroutine _trainingDemoCoroutine;
-    private int _trainingDemoToken;
-
-    public bool IsTaskRunning => _mode != Mode.None;
-    public string ActiveTaskId => _mode == Mode.Accuracy ? "accuracy" : _mode == Mode.Twinkle ? "twinkle" : "none";
-    public bool HasRunAnyTask { get; private set; }
-    public bool HasParticipantInfoLocked { get; private set; }
+    [Tooltip("<mspace> の幅（em）。詰まるなら 1.0 前後へ上げる。")]
+    public float nextTaskTableMspaceEm = 1.00f;
 
     [Header("Schedule (optional)")]
     [Tooltip("グループ（A/B）に基づく手順（Accuracy→Twinkle）で進めるための補助。")]
@@ -110,12 +114,78 @@ public sealed class EvaluationTaskController : MonoBehaviour
     private bool _hasPendingStep;
     private ScheduleStep _pendingStep;
 
+    [Header("Task Intro Countdown")]
+    [Tooltip("各タスク開始直前に行う『準備』カウントダウン（秒）。説明表示の猶予として使う。")]
+    public float taskIntroSeconds = 5f;
+
+    [SerializeField] private bool isTaskIntroActive;
+    [SerializeField] private float taskIntroRemainingSeconds;
+    private float _taskIntroEndRealtime;
+    private bool _hasIntroStep;
+    private ScheduleStep _introStep;
+
+    private EvaluationLogSession _session;
+    private EvaluationLogTask _activeTask;
+    private Mode _mode = Mode.None;
+
+    private PianoKey _highlightedKey;
+
+    private float _taskStartRealtime;
+    private float _nextBeatRealtime;
+    private int _trialIndex;
+    private int _accuracyPlannedTrials;
+
+    private MidiNote[] _twinkleNotes;
+    private int _twinkleNoteIndex;
+    private float _twinkleTimerTicks;
+
+    private bool _hapticsOverridden;
+    private bool[] _prevHapticEnableSend;
+
+    private Coroutine _trainingDemoCoroutine;
+    private int _trainingDemoToken;
+    private Coroutine _accuracyDemoCoroutine;
+    private int _accuracyDemoToken;
+
+    public bool IsTaskRunning => _mode != Mode.None;
+    public string ActiveTaskId => ToTaskId(_mode);
+    public bool HasRunAnyTask { get; private set; }
+    public bool HasParticipantInfoLocked { get; private set; }
+    public bool HasExplicitGroupSelection => hasExplicitGroupSelection || !requireExplicitGroupSelection;
+
+    public bool IsCountdownActive => isCountingDown;
+    public float CountdownRemainingSeconds => countdownRemainingSeconds;
+    public bool IsTaskIntroActive => isTaskIntroActive;
+    public float TaskIntroRemainingSeconds => taskIntroRemainingSeconds;
+
+    public string CurrentOrIntroTaskId
+    {
+        get
+        {
+            if (IsTaskRunning) return ActiveTaskId;
+            if (isTaskIntroActive && _hasIntroStep) return ToTaskId(_introStep.task);
+            return "none";
+        }
+    }
+
+    private struct ScheduleStep
+    {
+        public Mode task;
+        public EvaluationCondition condition;
+    }
+
     private void Start()
     {
         if (piano == null) piano = FindObjectOfType<PianoKeyController>();
         if (midiPlayer == null) midiPlayer = FindObjectOfType<MidiPlayer>();
         if (hapticSenders == null || hapticSenders.Length == 0) hapticSenders = FindObjectsOfType<HapticSerialSender>();
 
+        if (requireExplicitGroupSelection)
+        {
+            hasExplicitGroupSelection = false;
+        }
+
+        EnsureAccuracyPattern();
         BindKeyEventsIfPossible();
     }
 
@@ -123,19 +193,14 @@ public sealed class EvaluationTaskController : MonoBehaviour
     {
         UnbindKeyEventsIfPossible();
         StopCurrentTask();
+        try { _session?.Dispose(); } catch { }
+        _session = null;
     }
 
     private void Update()
     {
-        if (enableKeyboardShortcuts)
-        {
-            if (Input.GetKeyDown(KeyCode.F5)) StartAccuracyTask();
-            if (Input.GetKeyDown(KeyCode.F6)) StartTwinkleTask();
-            if (Input.GetKeyDown(KeyCode.F7)) PlayTrainingMidiDemoOnce();
-            if (Input.GetKeyDown(KeyCode.F8)) StopCurrentTask();
-        }
-
         TickCountdown();
+        TickTaskIntro();
 
         switch (_mode)
         {
@@ -146,529 +211,5 @@ public sealed class EvaluationTaskController : MonoBehaviour
                 TickTwinkle();
                 break;
         }
-    }
-
-    [ContextMenu("Eval/Play Training MIDI Demo Once")]
-    public void PlayTrainingMidiDemoOnce()
-    {
-        if (midiPlayer == null)
-        {
-            Debug.LogWarning("[EvaluationTaskController] MidiPlayer is missing.");
-            return;
-        }
-
-        StopCurrentTask();
-        CancelTrainingDemo();
-
-        float delay = Mathf.Max(0f, trainingDemoDelaySeconds);
-        if (delay <= 0f)
-        {
-            StartTrainingDemoNow();
-            return;
-        }
-
-        _trainingDemoToken++;
-        int token = _trainingDemoToken;
-        _trainingDemoCoroutine = StartCoroutine(TrainingDemoAfterDelay(token, delay));
-    }
-
-    private IEnumerator TrainingDemoAfterDelay(int token, float delaySeconds)
-    {
-        float end = Time.realtimeSinceStartup + delaySeconds;
-        while (Time.realtimeSinceStartup < end)
-        {
-            if (token != _trainingDemoToken) yield break;
-            yield return null;
-        }
-
-        if (token != _trainingDemoToken) yield break;
-        StartTrainingDemoNow();
-        _trainingDemoCoroutine = null;
-    }
-
-    private void StartTrainingDemoNow()
-    {
-        if (midiPlayer == null) return;
-        midiPlayer.KeyMode = KeyMode.ForShow;
-        midiPlayer.PlaySongByFileName(twinkleMidiFileNameNoExt, speed: 1f, details: "Training Demo", loop: false);
-    }
-
-    private void CancelTrainingDemo()
-    {
-        _trainingDemoToken++;
-        if (_trainingDemoCoroutine != null)
-        {
-            StopCoroutine(_trainingDemoCoroutine);
-            _trainingDemoCoroutine = null;
-        }
-    }
-
-    [ContextMenu("Eval/Start Accuracy Task")]
-    public void StartAccuracyTask()
-    {
-        StopCurrentTask();
-        CancelTrainingDemo();
-        EnsureSession();
-        HasParticipantInfoLocked = true;
-        HasRunAnyTask = true;
-
-        if (midiPlayer != null) midiPlayer.KeyMode = KeyMode.Physical;
-
-        ApplyHapticsForCondition(condition);
-
-        _activeTask = _session.BeginTask(ToConditionString(condition), "accuracy");
-        _mode = Mode.Accuracy;
-
-        _trialIndex = 0;
-        _taskStartRealtime = Time.realtimeSinceStartup;
-        _nextBeatRealtime = _taskStartRealtime;
-
-        ClearHighlight();
-    }
-
-    [ContextMenu("Eval/Start Twinkle Task")]
-    public void StartTwinkleTask()
-    {
-        StopCurrentTask();
-        CancelTrainingDemo();
-        EnsureSession();
-        HasParticipantInfoLocked = true;
-        HasRunAnyTask = true;
-
-        if (midiPlayer != null) midiPlayer.KeyMode = KeyMode.Physical;
-
-        ApplyHapticsForCondition(condition);
-
-        _activeTask = _session.BeginTask(ToConditionString(condition), "twinkle");
-        _mode = Mode.Twinkle;
-
-        _trialIndex = 0;
-        _twinkleNoteIndex = 0;
-        _twinkleTimerTicks = 0f;
-
-        try
-        {
-            string path = Path.Combine(Application.streamingAssetsPath, "MIDI", twinkleMidiFileNameNoExt + ".mid");
-            var inspector = new MidiFileInspector(path);
-            _twinkleNotes = inspector.GetNotes();
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"[EvaluationTaskController] Failed to load twinkle midi: {e.Message}", this);
-            _twinkleNotes = null;
-        }
-
-        ClearHighlight();
-
-        if (_twinkleNotes == null || _twinkleNotes.Length == 0)
-        {
-            StopCurrentTask();
-        }
-    }
-
-    [ContextMenu("Eval/Stop Current Task")]
-    public void StopCurrentTask()
-    {
-        CancelTrainingDemo();
-
-        // カウントダウン中ならキャンセルする（手順は進めない）
-        if (isCountingDown && _mode == Mode.None && _activeTask == null)
-        {
-            CancelCountdown();
-            RestoreHapticsIfNeeded();
-            return;
-        }
-
-        bool endedTask = _mode != Mode.None || _activeTask != null;
-
-        if (_mode == Mode.None && _activeTask == null)
-        {
-            RestoreHapticsIfNeeded();
-            return;
-        }
-
-        _mode = Mode.None;
-        _twinkleNotes = null;
-        _twinkleNoteIndex = 0;
-        _twinkleTimerTicks = 0f;
-
-        ClearHighlight();
-
-        _activeTask?.End();
-        _activeTask = null;
-
-        RestoreHapticsIfNeeded();
-
-        // タスクが終わったら手順を進める（手動 Stop も含む）。
-        if (endedTask && useGroupSchedule)
-        {
-            scheduleStepIndex = Mathf.Clamp(scheduleStepIndex + 1, 0, GetScheduleLength());
-
-            // 次が残っているなら自動でカウントダウン開始
-            if (scheduleStepIndex < GetScheduleLength())
-            {
-                BeginCountdownToNextScheduledTask();
-            }
-        }
-    }
-
-    public void ResetSchedule()
-    {
-        scheduleStepIndex = 0;
-    }
-
-    public int GetScheduleIndex() => scheduleStepIndex;
-
-    public int GetScheduleLength() => GetScheduleSteps(group).Length;
-
-    public bool TryStartNextScheduledTask()
-    {
-        if (!useGroupSchedule) return false;
-        if (IsTaskRunning) return false;
-
-        var steps = GetScheduleSteps(group);
-        if (scheduleStepIndex < 0) scheduleStepIndex = 0;
-        if (scheduleStepIndex >= steps.Length) return false;
-
-        var step = steps[scheduleStepIndex];
-        condition = step.condition;
-
-        if (step.task == Mode.Accuracy)
-        {
-            StartAccuracyTask();
-            return true;
-        }
-
-        if (step.task == Mode.Twinkle)
-        {
-            StartTwinkleTask();
-            return true;
-        }
-
-        return false;
-    }
-
-    public bool BeginCountdownToNextScheduledTask()
-    {
-        if (!useGroupSchedule) return false;
-        if (IsTaskRunning) return false;
-        if (isCountingDown) return false;
-
-        var steps = GetScheduleSteps(group);
-        if (scheduleStepIndex < 0) scheduleStepIndex = 0;
-        if (scheduleStepIndex >= steps.Length) return false;
-
-        HasParticipantInfoLocked = true;
-
-        _pendingStep = steps[scheduleStepIndex];
-        _hasPendingStep = true;
-        condition = _pendingStep.condition; // 表示上も次の条件に合わせる
-
-        float sec = Mathf.Max(0f, countdownSeconds);
-        _countdownEndRealtime = Time.realtimeSinceStartup + sec;
-        isCountingDown = true;
-        countdownRemainingSeconds = sec;
-
-        return true;
-    }
-
-    public bool IsCountdownActive => isCountingDown;
-    public float CountdownRemainingSeconds => countdownRemainingSeconds;
-
-    public string GetScheduleDescription()
-    {
-        var steps = GetScheduleSteps(group);
-        if (steps == null || steps.Length == 0) return "(no schedule)";
-
-        string s = "";
-        for (int i = 0; i < steps.Length; i++)
-        {
-            if (i > 0) s += " → ";
-            s += $"{ToTaskId(steps[i].task)}({ToConditionString(steps[i].condition)})";
-        }
-        return s;
-    }
-
-    public string GetNextScheduleStepLabel()
-    {
-        var steps = GetScheduleSteps(group);
-        if (steps == null || steps.Length == 0) return "(none)";
-        if (scheduleStepIndex < 0) return "(none)";
-        if (scheduleStepIndex >= steps.Length) return "(done)";
-
-        var step = steps[scheduleStepIndex];
-        return $"step {scheduleStepIndex + 1}/{steps.Length}: {ToTaskId(step.task)}({ToConditionString(step.condition)})";
-    }
-
-    public string GetNextScheduleStepDescriptionJa()
-    {
-        var steps = GetScheduleSteps(group);
-        if (steps == null || steps.Length == 0) return "次: なし";
-        if (scheduleStepIndex < 0) return "次: なし";
-        if (scheduleStepIndex >= steps.Length) return "完了";
-
-        var step = steps[scheduleStepIndex];
-        string taskJa = step.task == Mode.Accuracy ? "打鍵精度（Accuracy）" : "きらきら星（Twinkle）";
-        string condJa = step.condition == EvaluationCondition.TouchOn ? "触覚あり(touch_on)" : "触覚なし(touch_off)";
-        return $"次({scheduleStepIndex + 1}/{steps.Length}): {taskJa} / {condJa}";
-    }
-
-    private void TickAccuracy()
-    {
-        if (_activeTask == null)
-        {
-            StopCurrentTask();
-            return;
-        }
-
-        float elapsed = Time.realtimeSinceStartup - _taskStartRealtime;
-        if (elapsed >= Mathf.Max(0.01f, accuracyDurationSeconds))
-        {
-            StopCurrentTask();
-            return;
-        }
-
-        float secondsPerBeat = 60f / Mathf.Max(0.01f, bpm);
-        float now = Time.realtimeSinceStartup;
-
-        while (now >= _nextBeatRealtime)
-        {
-            float beatStartRealtime = _nextBeatRealtime;
-            _nextBeatRealtime += secondsPerBeat;
-            FireAccuracyBeat(beatStartRealtime);
-        }
-    }
-
-    private void FireAccuracyBeat(float beatStartRealtime)
-    {
-        _trialIndex++;
-        string target = GetAccuracyTarget(_trialIndex);
-        string beatUtcIso = UtcIsoFromRealtime(beatStartRealtime);
-
-        HighlightTarget(target);
-        _activeTask?.LogTrial(_trialIndex, beatUtcIso, target);
-        PlayMetronomeClick();
-    }
-
-    private void TickTwinkle()
-    {
-        if (_activeTask == null || _twinkleNotes == null)
-        {
-            StopCurrentTask();
-            return;
-        }
-
-        if (_twinkleNoteIndex >= _twinkleNotes.Length)
-        {
-            StopCurrentTask();
-            return;
-        }
-
-        float ticksPerSecond = Mathf.Max(0.01f, (float)_twinkleNotes[_twinkleNoteIndex].Tempo);
-        _twinkleTimerTicks += Time.deltaTime * ticksPerSecond;
-
-        while (_twinkleNoteIndex < _twinkleNotes.Length && _twinkleNotes[_twinkleNoteIndex].StartTime < _twinkleTimerTicks)
-        {
-            var note = _twinkleNotes[_twinkleNoteIndex];
-            _twinkleNoteIndex++;
-
-            _trialIndex++;
-            HighlightTarget(note.Note);
-            if (logTwinkleTargets) _activeTask.LogTrial(_trialIndex, note.Note);
-        }
-    }
-
-    private void HighlightTarget(string noteName)
-    {
-        if (piano == null || piano.PianoNotes == null)
-        {
-            return;
-        }
-
-        if (!piano.PianoNotes.TryGetValue(noteName, out var key) || key == null)
-        {
-            ClearHighlight();
-            return;
-        }
-
-        if (_highlightedKey == key) return;
-        ClearHighlight();
-
-        _highlightedKey = key;
-        _highlightedKey.SetGuideHighlight(true, guideKeyColour);
-    }
-
-    private void ClearHighlight()
-    {
-        if (_highlightedKey == null) return;
-        _highlightedKey.ClearGuideHighlight();
-        _highlightedKey = null;
-    }
-
-    private void PlayMetronomeClick()
-    {
-        if (metronomeAudioSource == null || metronomeClick == null) return;
-        metronomeAudioSource.PlayOneShot(metronomeClick);
-    }
-
-    private string GetAccuracyTarget(int trialIndex)
-    {
-        if (accuracyPattern == null || accuracyPattern.Length == 0) return "";
-        int idx = (trialIndex - 1) % accuracyPattern.Length;
-        if (idx < 0) idx += accuracyPattern.Length;
-        return accuracyPattern[idx] ?? "";
-    }
-
-    private void EnsureSession()
-    {
-        if (_session != null) return;
-        _session = new EvaluationLogSession(participantId, participantName, group.ToString());
-        Debug.Log($"[EvaluationTaskController] Log folder: {_session.RunDirectory}", this);
-    }
-
-    public void ResetLogSession()
-    {
-        StopCurrentTask();
-        try { _session?.Dispose(); } catch { }
-        _session = null;
-    }
-
-    private static string UtcIsoFromRealtime(float eventRealtime)
-    {
-        double deltaSeconds = eventRealtime - Time.realtimeSinceStartup;
-        return DateTimeOffset.UtcNow.AddSeconds(deltaSeconds).ToString("o");
-    }
-
-    private static string ToConditionString(EvaluationCondition c)
-    {
-        return c == EvaluationCondition.TouchOn ? "touch_on" : "touch_off";
-    }
-
-    private static string ToTaskId(Mode task)
-    {
-        return task == Mode.Accuracy ? "accuracy" : task == Mode.Twinkle ? "twinkle" : "none";
-    }
-
-    private struct ScheduleStep
-    {
-        public Mode task;
-        public EvaluationCondition condition;
-    }
-
-    private static ScheduleStep[] GetScheduleSteps(EvaluationGroup g)
-    {
-        // ユーザー指定の手順:
-        // - A: accuracy off → accuracy on → twinkle on → twinkle off
-        // - B: 逆
-        if (g == EvaluationGroup.A)
-        {
-            return new ScheduleStep[]
-            {
-                new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOff },
-                new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOn },
-                new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOn },
-                new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOff },
-            };
-        }
-
-        return new ScheduleStep[]
-        {
-            new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOn },
-            new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOff },
-            new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOff },
-            new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOn },
-        };
-    }
-
-    private void TickCountdown()
-    {
-        if (!isCountingDown)
-        {
-            countdownRemainingSeconds = 0f;
-            return;
-        }
-
-        float remain = _countdownEndRealtime - Time.realtimeSinceStartup;
-        countdownRemainingSeconds = Mathf.Max(0f, remain);
-        if (Time.realtimeSinceStartup < _countdownEndRealtime) return;
-
-        isCountingDown = false;
-        countdownRemainingSeconds = 0f;
-
-        if (!_hasPendingStep) return;
-        var step = _pendingStep;
-        _hasPendingStep = false;
-
-        // 開始
-        condition = step.condition;
-        if (step.task == Mode.Accuracy) StartAccuracyTask();
-        else if (step.task == Mode.Twinkle) StartTwinkleTask();
-    }
-
-    private void CancelCountdown()
-    {
-        isCountingDown = false;
-        countdownRemainingSeconds = 0f;
-        _hasPendingStep = false;
-    }
-
-    private void ApplyHapticsForCondition(EvaluationCondition c)
-    {
-        if (hapticSenders == null || hapticSenders.Length == 0) return;
-
-        if (_prevHapticEnableSend == null || _prevHapticEnableSend.Length != hapticSenders.Length)
-        {
-            _prevHapticEnableSend = new bool[hapticSenders.Length];
-        }
-
-        for (int i = 0; i < hapticSenders.Length; i++)
-        {
-            if (hapticSenders[i] == null) continue;
-            _prevHapticEnableSend[i] = hapticSenders[i].enableSend;
-            hapticSenders[i].enableSend = (c == EvaluationCondition.TouchOn);
-        }
-
-        _hapticsOverridden = true;
-    }
-
-    private void RestoreHapticsIfNeeded()
-    {
-        if (!_hapticsOverridden) return;
-        _hapticsOverridden = false;
-
-        if (hapticSenders == null || _prevHapticEnableSend == null) return;
-        for (int i = 0; i < hapticSenders.Length; i++)
-        {
-            if (hapticSenders[i] == null) continue;
-            if (i >= _prevHapticEnableSend.Length) continue;
-            hapticSenders[i].enableSend = _prevHapticEnableSend[i];
-        }
-    }
-
-    private void BindKeyEventsIfPossible()
-    {
-        if (piano == null || piano.PianoNotes == null || piano.PianoNotes.Count == 0) return;
-        foreach (var kv in piano.PianoNotes)
-        {
-            if (kv.Value == null) continue;
-            kv.Value.Pressed -= OnPianoKeyPressed;
-            kv.Value.Pressed += OnPianoKeyPressed;
-        }
-    }
-
-    private void UnbindKeyEventsIfPossible()
-    {
-        if (piano == null || piano.PianoNotes == null || piano.PianoNotes.Count == 0) return;
-        foreach (var kv in piano.PianoNotes)
-        {
-            if (kv.Value == null) continue;
-            kv.Value.Pressed -= OnPianoKeyPressed;
-        }
-    }
-
-    private void OnPianoKeyPressed(string noteName)
-    {
-        if (_activeTask == null) return;
-        _activeTask.LogPress(noteName ?? "");
     }
 }

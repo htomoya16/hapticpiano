@@ -34,6 +34,10 @@ public class PianoKey : MonoBehaviour
 	private float _keyAngle = 360f;
 	private bool _guideHighlight;
 	private Color _guideHighlightColour;
+	private bool _guideHighlightFading;
+	private float _guideFadeStartRealtime;
+	private float _guideFadeDurationSeconds;
+	private Color _guideFadeFromColour;
 
 	private Vector3 _position;
 	private Vector3 _rotation;
@@ -115,6 +119,8 @@ void Update()
 	{
 		KeyPlayMechanics(); // MIDI再生時の押下アニメーション
 	}
+
+	UpdateGuideHighlightFade();
 
 	if (PianoKeyController.KeyMode == KeyMode.Physical)
 	{
@@ -391,14 +397,55 @@ void PlayVirtualAudio()
 
 	public void SetGuideHighlight(bool on, Color colour)
 	{
+		_guideHighlightFading = false;
 		_guideHighlight = on;
 		_guideHighlightColour = colour;
+		ApplyGuideVisual();
+	}
+
+	/// <summary>
+	/// ガイド点灯を一定秒でフェードアウトさせる（Accuracy タスク向け）。
+	/// </summary>
+	public void StartGuideHighlightFade(Color colour, float fadeSeconds)
+	{
+		_guideHighlight = true;
+		_guideHighlightFading = true;
+		_guideFadeFromColour = colour;
+		_guideHighlightColour = colour;
+		_guideFadeStartRealtime = Time.realtimeSinceStartup;
+		_guideFadeDurationSeconds = Mathf.Max(0.01f, fadeSeconds);
 		ApplyGuideVisual();
 	}
 
 	public void ClearGuideHighlight()
 	{
 		_guideHighlight = false;
+		_guideHighlightFading = false;
+		ApplyGuideVisual();
+	}
+
+	private void UpdateGuideHighlightFade()
+	{
+		if (!_guideHighlightFading) return;
+		if (!_guideHighlight) { _guideHighlightFading = false; return; }
+		if (Material == null) return;
+
+		// MIDIのチャンネル色表示中は鍵盤側の色制御を優先
+		if (_play && PianoKeyController != null && PianoKeyController.ShowMIDIChannelColours)
+		{
+			return;
+		}
+
+		float t = (Time.realtimeSinceStartup - _guideFadeStartRealtime) / Mathf.Max(0.01f, _guideFadeDurationSeconds);
+		if (t >= 1f)
+		{
+			_guideHighlight = false;
+			_guideHighlightFading = false;
+			ApplyGuideVisual();
+			return;
+		}
+
+		_guideHighlightColour = Color.Lerp(_guideFadeFromColour, _originalColour, Mathf.Clamp01(t));
 		ApplyGuideVisual();
 	}
 

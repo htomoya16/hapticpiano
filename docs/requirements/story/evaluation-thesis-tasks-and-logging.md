@@ -29,8 +29,10 @@
 ### 2. Accuracy（主要評価）
 1. 60 BPM のメトロノームに同期して 1拍=1trial で進行すること。
 2. 各 trial でターゲット鍵が点灯し、ターゲット系列が反復されること：
-   - `C4 → D4 → E4 → F4 → G4 → F4 → E4 → D4 → C4`
-3. タスク時間が規定秒数（例: 30秒）で終了できること。
+   - 1セット目（1往復=15拍）: `C4 → D4 → E4 → F4 → G4 → A4 → B4 → C5 → B4 → A4 → G4 → F4 → E4 → D4 → C4`
+   - 2セット目以降：先頭のドを除外して連結（`D4 → E4 → ... → D4 → C4`）
+   - 上記を **3セット** 行うこと（60 BPMなら合計43拍=43秒の想定）
+3. タスクが規定のセット数（拍数）で終了できること。
 4. タスク中の押下イベントが記録されること（押下時刻＋押下キー）。
 
 ### 3. Twinkle（副次評価）
@@ -38,13 +40,29 @@
 2. 余裕があれば、ターゲット提示（trial）と押下イベントがログに記録できること（トグル等で ON/OFF 可能）。
 
 ### 4. ログ（CSV）
-1. タスク単位のログが 1 行/タスクで出力されること：
+1. ログの保存先が `Application.persistentDataPath` 配下であること：
+   - `Application.persistentDataPath/EvaluationLogs/<participant_id>/<run_id>/`
+2. セッションメタが出力されること：
+   - `session_meta.csv`
+   - 何のため：このフォルダ一式が「誰の」「どの順序割当（A/B）」の記録かを残す
+   - `created_time,participant_id,participant_name,group`
+3. タスク単位のログが 1 行/タスクで出力されること：
+   - `task_summary.csv`
+   - 何のため：タスクの開始/終了、条件、タスク種別の一覧（全体のインデックス）
    - `start_time,end_time,participant_id,condition,task`
-2. trial ログが 1 行/trial で出力されること：
+4. trial（正解ターゲット側）のログが 1 行/trial で出力されること：
+   - `{task}_{condition}_{task_instance_id}_trials.csv`
+   - 何のため：ガイドとして提示した「正解ターゲット」の時系列
    - `trial_index,beat_time,target_key`
-3. 押下ログが 1 行/押下で出力されること：
+5. 押下（実入力側）のログが 1 行/押下で出力されること：
+   - `{task}_{condition}_{task_instance_id}_presses.csv`
+   - 何のため：実際に押されたキーの時系列
    - `press_time,pressed_key`
-4. ログの保存先が `Application.persistentDataPath` 配下であること。
+6. 時刻が UTC（ISO 8601）で保存されること。
+
+補足（意味）
+- `*_trials.csv` は「その時点で提示した正解ターゲット」側、`*_presses.csv` は「実際の押下」側。
+- Twinkle の `beat_time` は「ノートを処理してガイド提示したタイミング」で、厳密な音声再生時刻ではない。
 
 ## 実装参照（現状）
 - `Assets/Scripts/Evaluation/EvaluationTaskController.cs`
