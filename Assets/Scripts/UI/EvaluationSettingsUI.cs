@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 /// <summary>
 /// 設定画面（SettingsOverlay）から評価タスクを起動/切替するためのUIブリッジ。
@@ -16,6 +17,42 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     public TMP_Text statusText;
     public TMP_InputField participantIdInput;
     public TMP_InputField participantNameInput;
+
+    [Header("Task Button (Start/Abort)")]
+    [Tooltip("タスク開始/中止のボタンルート（ラベル切替用）。")]
+    public GameObject taskButtonRoot;
+
+    [Tooltip("タスク開始/中止ボタン（interactable 切替用）。")]
+    public Button taskButton;
+
+    [Tooltip("ボタンの表示テキスト（『タスクスタート』『中止』『完了』を切替）。")]
+    public TMP_Text taskButtonLabel;
+
+    [Header("Task Button (Color)")]
+    [Tooltip("メインボタンの色も状態に応じて切り替える")]
+    public bool tintTaskButton = true;
+
+    [Tooltip("待機中（開始可能）")]
+    public Color taskStartButtonColor = new Color(0.20f, 0.65f, 0.28f, 1f);
+
+    [Tooltip("実行中/カウントダウン中（中止）")]
+    public Color taskAbortButtonColor = new Color(0.85f, 0.25f, 0.25f, 1f);
+
+    [Tooltip("全タスク完了（押せない）")]
+    public Color taskDoneButtonColor = new Color(0.35f, 0.35f, 0.35f, 1f);
+
+    [Tooltip("ホバー時の明るさ倍率（VRでホバーがない場合は気にしなくてOK）")]
+    [Range(1f, 2f)]
+    public float buttonHighlightMultiplier = 1.15f;
+
+    [Tooltip("押下時の暗さ倍率")]
+    [Range(0.1f, 1f)]
+    public float buttonPressedMultiplier = 0.9f;
+
+    [Tooltip("停止ボタンのルート（実行中/カウントダウン中のみ表示したい場合に設定）")]
+    public GameObject stopButtonRoot;
+    [Tooltip("停止ボタン（実行中/カウントダウン中のみ押せるようにしたい場合に設定）")]
+    public Button stopButton;
 
     [Header("Behavior")]
     [Tooltip("ボタン操作後に設定画面を閉じる")]
@@ -46,12 +83,15 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     {
         if (evaluation == null) return;
 
-        bool locked = evaluation.HasRunAnyTask;
+        bool locked = evaluation.HasParticipantInfoLocked;
         if (locked != _prevLocked)
         {
             _prevLocked = locked;
             ApplyIdNameLockState(locked);
         }
+
+        ApplyTaskButtonState();
+        ApplyStopButtonState();
     }
 
     private void OnDisable()
@@ -63,8 +103,10 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     {
         if (evaluation == null) return;
 
-        _prevLocked = evaluation.HasRunAnyTask;
+        _prevLocked = evaluation.HasParticipantInfoLocked;
         ApplyIdNameLockState(_prevLocked);
+        ApplyTaskButtonState();
+        ApplyStopButtonState();
 
         if (participantIdInput != null)
         {
@@ -84,18 +126,19 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
         if (statusText != null)
         {
+            string group = evaluation.group == EvaluationGroup.A ? "A（順序: no→yes / yes→no）" : "B（順序: yes→no / no→yes）";
             bool isTouchOn = evaluation.condition == EvaluationCondition.TouchOn;
-            string group = isTouchOn ? "B（触覚あり）" : "A（触覚なし）";
             string cond = isTouchOn ? "touch_on" : "touch_off";
             string task = evaluation.IsTaskRunning ? evaluation.ActiveTaskId : "none";
-            statusText.text = $"participant={evaluation.participantId}\nname={evaluation.participantName}\ngroup={group}\ncondition={cond}\ntask={task}";
+            string schedule = evaluation.useGroupSchedule ? evaluation.GetNextScheduleStepLabel() : "(schedule off)";
+            statusText.text = $"participant={evaluation.participantId}\nname={evaluation.participantName}\ngroup={group}\ncondition={cond}\ntask={task}\n{schedule}";
         }
     }
 
     public void ApplyParticipantId()
     {
         if (evaluation == null || participantIdInput == null) return;
-        if (evaluation.HasRunAnyTask) return;
+        if (evaluation.HasParticipantInfoLocked) return;
         string sanitized = EvaluationLogSession.SanitizeParticipantId(participantIdInput.text);
         bool changed = !string.Equals(evaluation.participantId ?? "", sanitized, System.StringComparison.Ordinal);
 
@@ -108,7 +151,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     public void ApplyParticipantName()
     {
         if (evaluation == null || participantNameInput == null) return;
-        if (evaluation.HasRunAnyTask) return;
+        if (evaluation.HasParticipantInfoLocked) return;
         string v = participantNameInput.text ?? "";
         bool changed = !string.Equals(evaluation.participantName ?? "", v, System.StringComparison.Ordinal);
 
@@ -120,7 +163,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     public void ApplyParticipantIdAndName()
     {
         if (evaluation == null) return;
-        if (evaluation.HasRunAnyTask) return;
+        if (evaluation.HasParticipantInfoLocked) return;
 
         string nextId = evaluation.participantId ?? "";
         string nextName = evaluation.participantName ?? "";
@@ -165,14 +208,22 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         Refresh();
     }
 
-    public void SetGroupA_NoHaptics()
+    public void SelectGroupA()
     {
-        SetConditionTouchOff();
+        if (evaluation == null) return;
+        if (evaluation.HasParticipantInfoLocked) return;
+        evaluation.group = EvaluationGroup.A;
+        evaluation.ResetSchedule();
+        SetConditionTouchOff(); // A は最初が touch_off
     }
 
-    public void SetGroupB_WithHaptics()
+    public void SelectGroupB()
     {
-        SetConditionTouchOn();
+        if (evaluation == null) return;
+        if (evaluation.HasParticipantInfoLocked) return;
+        evaluation.group = EvaluationGroup.B;
+        evaluation.ResetSchedule();
+        SetConditionTouchOn(); // B は最初が touch_on
     }
 
     public void StartAccuracyTask()
@@ -199,7 +250,29 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     public void StopTask()
     {
         if (evaluation == null) return;
+        if (!CanStopNow()) return;
         evaluation.StopCurrentTask();
+        AfterAction();
+    }
+
+    /// <summary>
+    /// 1つのボタンで運用するためのメイン操作。
+    /// - 待機中: 次のタスク開始（20秒カウントダウン開始）
+    /// - 実行中/カウントダウン中: 中止（停止/キャンセル）
+    /// </summary>
+    public void TaskStartOrAbort()
+    {
+        if (evaluation == null) return;
+
+        if (CanStopNow())
+        {
+            evaluation.StopCurrentTask();
+        }
+        else
+        {
+            evaluation.BeginCountdownToNextScheduledTask();
+        }
+
         AfterAction();
     }
 
@@ -210,6 +283,81 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         if (closeOverlayAfterAction && overlayOpener != null)
         {
             overlayOpener.Close();
+        }
+    }
+
+    private bool CanStopNow()
+    {
+        return evaluation != null && (evaluation.IsTaskRunning || evaluation.IsCountdownActive);
+    }
+
+    private bool CanStartNow()
+    {
+        if (evaluation == null) return false;
+        if (!evaluation.useGroupSchedule) return false;
+        if (evaluation.IsTaskRunning || evaluation.IsCountdownActive) return false;
+        return evaluation.GetScheduleIndex() < evaluation.GetScheduleLength();
+    }
+
+    private void ApplyTaskButtonState()
+    {
+        if (evaluation == null) return;
+
+        bool canStop = CanStopNow();
+        bool canStart = CanStartNow();
+        bool done = !canStop && !canStart && evaluation.useGroupSchedule && evaluation.GetScheduleLength() > 0 && evaluation.GetScheduleIndex() >= evaluation.GetScheduleLength();
+
+        if (taskButtonLabel != null)
+        {
+            taskButtonLabel.text = done ? "完了" : (canStop ? "中止" : "タスクスタート");
+        }
+
+        if (taskButton != null)
+        {
+            taskButton.interactable = canStop || canStart;
+            if (tintTaskButton)
+            {
+                var baseColor = done ? taskDoneButtonColor : (canStop ? taskAbortButtonColor : taskStartButtonColor);
+                ApplyButtonTint(taskButton, baseColor);
+            }
+        }
+
+        if (taskButtonRoot != null && !taskButtonRoot.activeSelf)
+        {
+            taskButtonRoot.SetActive(true);
+        }
+    }
+
+    private void ApplyButtonTint(Button b, Color baseColor)
+    {
+        if (b == null) return;
+
+        var colors = b.colors;
+        colors.normalColor = baseColor;
+        colors.highlightedColor = MultiplyRgb(baseColor, buttonHighlightMultiplier);
+        colors.pressedColor = MultiplyRgb(baseColor, buttonPressedMultiplier);
+        colors.selectedColor = colors.highlightedColor;
+        colors.disabledColor = taskDoneButtonColor;
+        b.colors = colors;
+    }
+
+    private static Color MultiplyRgb(Color c, float m)
+    {
+        return new Color(Mathf.Clamp01(c.r * m), Mathf.Clamp01(c.g * m), Mathf.Clamp01(c.b * m), c.a);
+    }
+
+    private void ApplyStopButtonState()
+    {
+        bool canStop = CanStopNow();
+        if (stopButtonRoot != null)
+        {
+            if (stopButtonRoot.activeSelf != canStop) stopButtonRoot.SetActive(canStop);
+        }
+
+        if (stopButton != null)
+        {
+            stopButton.interactable = canStop;
+            if (stopButton.gameObject.activeSelf != canStop) stopButton.gameObject.SetActive(canStop);
         }
     }
 

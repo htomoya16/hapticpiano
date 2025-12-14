@@ -14,6 +14,7 @@
 - `hapticpiano.unity` で評価タスクを実行できること
 - `touch_on/touch_off` の条件切り替えにより、触覚送信（`HapticSerialSender.enableSend`）が切り替わること
 - CSV ログが要件のカラムで出力されること
+- A/B グループとして順序割当（カウンターバランス）を運用できること
 
 ## 非スコープ
 - 統計解析コード、アンケート UI、被験者同意 UI
@@ -49,3 +50,14 @@
 - `Assets/Scripts/Evaluation/EvaluationTaskController.cs`
 - `Assets/Scripts/Evaluation/EvaluationLogging.cs`
 
+## 運用メモ（A/Bグループの順序）
+- Aグループ：
+  - Accuracy：`touch_off → touch_on`
+  - Twinkle：`touch_on → touch_off`
+- Bグループ（逆順）：
+  - Accuracy：`touch_on → touch_off`
+  - Twinkle：`touch_off → touch_on`
+
+## 運用メモ（タスク間インターバルとVR表示）
+- 各タスク開始前（**初回含む**）に **20秒** のインターバルを設ける。
+- インターバル中は、VR 内に「次のタスク説明」と「開始までのカウントダウン」を表示する。

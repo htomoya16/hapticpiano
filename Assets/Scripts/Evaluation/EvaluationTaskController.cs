@@ -8,6 +8,12 @@ public enum EvaluationCondition
     TouchOff = 1,
 }
 
+public enum EvaluationGroup
+{
+    A = 0,
+    B = 1,
+}
+
 public sealed class EvaluationTaskController : MonoBehaviour
 {
     private enum Mode
@@ -20,6 +26,9 @@ public sealed class EvaluationTaskController : MonoBehaviour
     [Header("Session")]
     public string participantId = "P01";
     public string participantName = "";
+
+    [Tooltip("A/B は『条件の割り当て順（カウンタバランス）』を表す。")]
+    public EvaluationGroup group = EvaluationGroup.A;
     public EvaluationCondition condition = EvaluationCondition.TouchOn;
 
     [Header("References")]
@@ -74,6 +83,24 @@ public sealed class EvaluationTaskController : MonoBehaviour
     public bool IsTaskRunning => _mode != Mode.None;
     public string ActiveTaskId => _mode == Mode.Accuracy ? "accuracy" : _mode == Mode.Twinkle ? "twinkle" : "none";
     public bool HasRunAnyTask { get; private set; }
+    public bool HasParticipantInfoLocked { get; private set; }
+
+    [Header("Schedule (optional)")]
+    [Tooltip("グループ（A/B）に基づく手順（Accuracy→Twinkle）で進めるための補助。")]
+    public bool useGroupSchedule = true;
+
+    [SerializeField, Tooltip("グループ手順の現在ステップ（0始まり）。")]
+    private int scheduleStepIndex = 0;
+
+    [Header("Countdown")]
+    [Tooltip("各タスク開始前（初回含む）の待機秒数。")]
+    public float countdownSeconds = 20f;
+
+    [SerializeField] private bool isCountingDown;
+    [SerializeField] private float countdownRemainingSeconds;
+    private float _countdownEndRealtime;
+    private bool _hasPendingStep;
+    private ScheduleStep _pendingStep;
 
     private void Start()
     {
@@ -99,6 +126,8 @@ public sealed class EvaluationTaskController : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.F7)) PlayTrainingMidiDemoOnce();
             if (Input.GetKeyDown(KeyCode.F8)) StopCurrentTask();
         }
+
+        TickCountdown();
 
         switch (_mode)
         {
@@ -131,6 +160,7 @@ public sealed class EvaluationTaskController : MonoBehaviour
     {
         StopCurrentTask();
         EnsureSession();
+        HasParticipantInfoLocked = true;
         HasRunAnyTask = true;
 
         if (midiPlayer != null) midiPlayer.KeyMode = KeyMode.Physical;
@@ -152,6 +182,7 @@ public sealed class EvaluationTaskController : MonoBehaviour
     {
         StopCurrentTask();
         EnsureSession();
+        HasParticipantInfoLocked = true;
         HasRunAnyTask = true;
 
         if (midiPlayer != null) midiPlayer.KeyMode = KeyMode.Physical;
@@ -188,6 +219,16 @@ public sealed class EvaluationTaskController : MonoBehaviour
     [ContextMenu("Eval/Stop Current Task")]
     public void StopCurrentTask()
     {
+        // カウントダウン中ならキャンセルする（手順は進めない）
+        if (isCountingDown && _mode == Mode.None && _activeTask == null)
+        {
+            CancelCountdown();
+            RestoreHapticsIfNeeded();
+            return;
+        }
+
+        bool endedTask = _mode != Mode.None || _activeTask != null;
+
         if (_mode == Mode.None && _activeTask == null)
         {
             RestoreHapticsIfNeeded();
@@ -205,6 +246,119 @@ public sealed class EvaluationTaskController : MonoBehaviour
         _activeTask = null;
 
         RestoreHapticsIfNeeded();
+
+        // タスクが終わったら手順を進める（手動 Stop も含む）。
+        if (endedTask && useGroupSchedule)
+        {
+            scheduleStepIndex = Mathf.Clamp(scheduleStepIndex + 1, 0, GetScheduleLength());
+
+            // 次が残っているなら自動でカウントダウン開始
+            if (scheduleStepIndex < GetScheduleLength())
+            {
+                BeginCountdownToNextScheduledTask();
+            }
+        }
+    }
+
+    public void ResetSchedule()
+    {
+        scheduleStepIndex = 0;
+    }
+
+    public int GetScheduleIndex() => scheduleStepIndex;
+
+    public int GetScheduleLength() => GetScheduleSteps(group).Length;
+
+    public bool TryStartNextScheduledTask()
+    {
+        if (!useGroupSchedule) return false;
+        if (IsTaskRunning) return false;
+
+        var steps = GetScheduleSteps(group);
+        if (scheduleStepIndex < 0) scheduleStepIndex = 0;
+        if (scheduleStepIndex >= steps.Length) return false;
+
+        var step = steps[scheduleStepIndex];
+        condition = step.condition;
+
+        if (step.task == Mode.Accuracy)
+        {
+            StartAccuracyTask();
+            return true;
+        }
+
+        if (step.task == Mode.Twinkle)
+        {
+            StartTwinkleTask();
+            return true;
+        }
+
+        return false;
+    }
+
+    public bool BeginCountdownToNextScheduledTask()
+    {
+        if (!useGroupSchedule) return false;
+        if (IsTaskRunning) return false;
+        if (isCountingDown) return false;
+
+        var steps = GetScheduleSteps(group);
+        if (scheduleStepIndex < 0) scheduleStepIndex = 0;
+        if (scheduleStepIndex >= steps.Length) return false;
+
+        HasParticipantInfoLocked = true;
+
+        _pendingStep = steps[scheduleStepIndex];
+        _hasPendingStep = true;
+        condition = _pendingStep.condition; // 表示上も次の条件に合わせる
+
+        float sec = Mathf.Max(0f, countdownSeconds);
+        _countdownEndRealtime = Time.realtimeSinceStartup + sec;
+        isCountingDown = true;
+        countdownRemainingSeconds = sec;
+
+        return true;
+    }
+
+    public bool IsCountdownActive => isCountingDown;
+    public float CountdownRemainingSeconds => countdownRemainingSeconds;
+
+    public string GetScheduleDescription()
+    {
+        var steps = GetScheduleSteps(group);
+        if (steps == null || steps.Length == 0) return "(no schedule)";
+
+        string s = "";
+        for (int i = 0; i < steps.Length; i++)
+        {
+            if (i > 0) s += " → ";
+            s += $"{ToTaskId(steps[i].task)}({ToConditionString(steps[i].condition)})";
+        }
+        return s;
+    }
+
+    public string GetNextScheduleStepLabel()
+    {
+        var steps = GetScheduleSteps(group);
+        if (steps == null || steps.Length == 0) return "(none)";
+        if (scheduleStepIndex < 0) return "(none)";
+        if (scheduleStepIndex >= steps.Length) return "(done)";
+
+        var step = steps[scheduleStepIndex];
+        return $"step {scheduleStepIndex + 1}/{steps.Length}: {ToTaskId(step.task)}({ToConditionString(step.condition)})";
+    }
+
+    public string GetNextScheduleStepDescriptionJa()
+    {
+        var steps = GetScheduleSteps(group);
+        if (steps == null || steps.Length == 0) return "次: なし";
+        if (scheduleStepIndex < 0) return "次: なし";
+        if (scheduleStepIndex >= steps.Length) return "完了";
+
+        var step = steps[scheduleStepIndex];
+        string taskJa = step.task == Mode.Accuracy ? "打鍵精度（Accuracy）" : "きらきら星（Twinkle）";
+        string condJa = step.condition == EvaluationCondition.TouchOn ? "触覚あり(touch_on)" : "触覚なし(touch_off)";
+        return $"次({scheduleStepIndex + 1}/{steps.Length}): {taskJa} / {condJa}";
     }
 
     private void TickAccuracy()
@@ -316,7 +470,7 @@ public sealed class EvaluationTaskController : MonoBehaviour
     private void EnsureSession()
     {
         if (_session != null) return;
-        _session = new EvaluationLogSession(participantId, participantName);
+        _session = new EvaluationLogSession(participantId, participantName, group.ToString());
         Debug.Log($"[EvaluationTaskController] Log folder: {_session.RunDirectory}", this);
     }
 
@@ -336,6 +490,74 @@ public sealed class EvaluationTaskController : MonoBehaviour
     private static string ToConditionString(EvaluationCondition c)
     {
         return c == EvaluationCondition.TouchOn ? "touch_on" : "touch_off";
+    }
+
+    private static string ToTaskId(Mode task)
+    {
+        return task == Mode.Accuracy ? "accuracy" : task == Mode.Twinkle ? "twinkle" : "none";
+    }
+
+    private struct ScheduleStep
+    {
+        public Mode task;
+        public EvaluationCondition condition;
+    }
+
+    private static ScheduleStep[] GetScheduleSteps(EvaluationGroup g)
+    {
+        // ユーザー指定の手順:
+        // - A: accuracy off → accuracy on → twinkle on → twinkle off
+        // - B: 逆
+        if (g == EvaluationGroup.A)
+        {
+            return new ScheduleStep[]
+            {
+                new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOff },
+                new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOn },
+                new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOn },
+                new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOff },
+            };
+        }
+
+        return new ScheduleStep[]
+        {
+            new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOn },
+            new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOff },
+            new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOff },
+            new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOn },
+        };
+    }
+
+    private void TickCountdown()
+    {
+        if (!isCountingDown)
+        {
+            countdownRemainingSeconds = 0f;
+            return;
+        }
+
+        float remain = _countdownEndRealtime - Time.realtimeSinceStartup;
+        countdownRemainingSeconds = Mathf.Max(0f, remain);
+        if (Time.realtimeSinceStartup < _countdownEndRealtime) return;
+
+        isCountingDown = false;
+        countdownRemainingSeconds = 0f;
+
+        if (!_hasPendingStep) return;
+        var step = _pendingStep;
+        _hasPendingStep = false;
+
+        // 開始
+        condition = step.condition;
+        if (step.task == Mode.Accuracy) StartAccuracyTask();
+        else if (step.task == Mode.Twinkle) StartTwinkleTask();
+    }
+
+    private void CancelCountdown()
+    {
+        isCountingDown = false;
+        countdownRemainingSeconds = 0f;
+        _hasPendingStep = false;
     }
 
     private void ApplyHapticsForCondition(EvaluationCondition c)

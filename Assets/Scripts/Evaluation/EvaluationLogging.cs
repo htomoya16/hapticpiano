@@ -7,18 +7,21 @@ public sealed class EvaluationLogSession : IDisposable
 {
     private readonly string _participantId;
     private readonly string _participantName;
+    private readonly string _group;
     private readonly string _runDirectory;
     private readonly string _summaryPath;
     private readonly string _metaPath;
 
     public string ParticipantId => _participantId;
     public string ParticipantName => _participantName;
+    public string Group => _group;
     public string RunDirectory => _runDirectory;
 
-    public EvaluationLogSession(string participantId, string participantName)
+    public EvaluationLogSession(string participantId, string participantName, string group)
     {
         _participantId = SanitizeParticipantId(participantId);
         _participantName = participantName ?? "";
+        _group = group ?? "";
 
         string baseDir = Path.Combine(Application.persistentDataPath, "EvaluationLogs", _participantId);
         string runId = DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss");
@@ -29,7 +32,7 @@ public sealed class EvaluationLogSession : IDisposable
         EnsureHeader(_summaryPath, "start_time,end_time,participant_id,condition,task");
 
         _metaPath = Path.Combine(_runDirectory, "session_meta.csv");
-        EnsureHeader(_metaPath, "created_time,participant_id,participant_name");
+        EnsureHeader(_metaPath, "created_time,participant_id,participant_name,group");
         AppendSessionMeta();
     }
 
@@ -80,7 +83,8 @@ public sealed class EvaluationLogSession : IDisposable
         sw.WriteLine(string.Join(",",
             Csv(NowUtcIso()),
             Csv(_participantId),
-            Csv(_participantName)));
+            Csv(_participantName),
+            Csv(_group)));
     }
 
     private static string SanitizePathSegment(string segment)
