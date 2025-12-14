@@ -63,6 +63,8 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
     private bool _listenersBound;
     private bool _prevLocked;
+    private bool _prevCountdownActive;
+    private bool _prevTaskRunning;
 
     private void Start()
     {
@@ -71,17 +73,42 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
         BindListenersIfNeeded();
         Refresh();
+
+        if (evaluation != null)
+        {
+            _prevCountdownActive = evaluation.IsCountdownActive;
+            _prevTaskRunning = evaluation.IsTaskRunning;
+        }
     }
 
     private void OnEnable()
     {
         BindListenersIfNeeded();
         Refresh();
+
+        if (evaluation != null)
+        {
+            _prevCountdownActive = evaluation.IsCountdownActive;
+            _prevTaskRunning = evaluation.IsTaskRunning;
+        }
     }
 
     private void Update()
     {
         if (evaluation == null) return;
+
+        bool countdownActive = evaluation.IsCountdownActive;
+        bool taskRunning = evaluation.IsTaskRunning;
+        bool startedCountdown = countdownActive && !_prevCountdownActive;
+        bool startedTask = taskRunning && !_prevTaskRunning;
+        _prevCountdownActive = countdownActive;
+        _prevTaskRunning = taskRunning;
+
+        // デモ/タスク開始時に設定画面を自動で閉じたい（ただし実行中に開いた場合は閉じない）
+        if ((startedCountdown || startedTask) && overlayOpener != null && overlayOpener.IsOpen)
+        {
+            overlayOpener.Close();
+        }
 
         bool locked = evaluation.HasParticipantInfoLocked;
         if (locked != _prevLocked)
@@ -230,21 +257,21 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     {
         if (evaluation == null) return;
         evaluation.StartAccuracyTask();
-        AfterAction();
+        AfterAction(forceCloseOverlay: true);
     }
 
     public void StartTwinkleTask()
     {
         if (evaluation == null) return;
         evaluation.StartTwinkleTask();
-        AfterAction();
+        AfterAction(forceCloseOverlay: true);
     }
 
     public void PlayTrainingDemoOnce()
     {
         if (evaluation == null) return;
         evaluation.PlayTrainingMidiDemoOnce();
-        AfterAction();
+        AfterAction(forceCloseOverlay: true);
     }
 
     public void StopTask()
@@ -276,11 +303,11 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         AfterAction();
     }
 
-    private void AfterAction()
+    private void AfterAction(bool forceCloseOverlay = false)
     {
         Refresh();
 
-        if (closeOverlayAfterAction && overlayOpener != null)
+        if ((forceCloseOverlay || closeOverlayAfterAction) && overlayOpener != null)
         {
             overlayOpener.Close();
         }

@@ -2637,7 +2637,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u30AB\u30A6\u30F3\u30C8\u30C0\u30A6\u30F3"
+  m_text: "\u8AAC\u660E"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
   m_sharedMaterial: {fileID: 204354137830494628, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
@@ -2836,6 +2836,9 @@ MonoBehaviour:
   PressAngleDecay: 0.5
   Sort: 1
   NoMultiAudioSource: 0
+  PhysicalPressEnterAngleX: 359.5
+  PhysicalPressExitAngleX: 359.8
+  PrewarmAudioSourcesPerKey: 2
   SustainPedalPressed: 1
   KeyPressAngleDecay: 1
   RepeatedKeyTeleport: 1
@@ -4353,8 +4356,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u200B"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
+  m_sharedMaterial: {fileID: 204354137830494628, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -4698,8 +4701,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Enter text...
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
+  m_sharedMaterial: {fileID: 204354137830494628, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -7627,8 +7630,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: "\u200B"
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
+  m_sharedMaterial: {fileID: 204354137830494628, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -9125,8 +9128,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Enter text...
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
+  m_sharedMaterial: {fileID: 204354137830494628, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -10637,20 +10640,10 @@ MonoBehaviour:
   - {r: 0.3372549, g: 0.6156863, b: 0.06666667, a: 1}
   - {r: 0.21568629, g: 0.41960788, b: 0.68235296, a: 1}
   MIDISongs:
-  - MIDIFile: {fileID: 102900000, guid: 281ed0444563cd14790aa4a5079467ef, type: 3}
-    SongFileName: chopin_fantaisie-impromptu
-    Speed: 1
-    Details: "Fantaisie Impromptu, Op. 66\nFr\xE9d\xE9ric Chopin"
-  - MIDIFile: {fileID: 102900000, guid: 24701c19d658212479b01c1fe70312e0, type: 3}
-    SongFileName: gymnopedie_1
-    Speed: 1
-    Details: "Gymnop\xE9die No.1\nErik Satie"
   - MIDIFile: {fileID: 102900000, guid: f2bdafb14ebf0414496c84e4dc0ed984, type: 3}
-    SongFileName: entertainer
+    SongFileName: twinkle_twinkle_60bpm_12bars
     Speed: 1
-    Details: 'Entertainer
-
-      Scott Joplin'
+    Details: 
   MidiNotes: []
   _preset: 0
 --- !u!4 &1656088025

@@ -22,6 +22,18 @@ public class PianoKeyController : MonoBehaviour
 	public float PressAngleDecay = 1f;		// Rate of keys being slowly released.
 	public bool Sort = true;				// Sorts the Notes. If regex is not empty, it will use that to do the sorting.
 	public bool NoMultiAudioSource;			// Will prevent duplicates if true, if you need to optimise. Multiple Audio sources are necessary to remove crackling.
+
+	[Header("Physical Press Detection (EulerAngles.x)")]
+	[Tooltip("物理押下の判定（0→360補正後の eulerAngles.x）。この値以下になった瞬間に押下扱い。")]
+	public float PhysicalPressEnterAngleX = 359.5f;
+
+	[Tooltip("押下状態の解除（0→360補正後の eulerAngles.x）。この値以上に戻ったら次の押下を受け付ける。")]
+	public float PhysicalPressExitAngleX = 359.8f;
+
+	[Header("AudioSource Pool")]
+	[Tooltip("連打時に AddComponent<AudioSource>() が走って遅延するのを防ぐため、各鍵盤に事前に用意する AudioSource 数。")]
+	[Min(1)]
+	public int PrewarmAudioSourcesPerKey = 2;
 	
 
 	[Header("Attributes")]
@@ -98,6 +110,9 @@ void Awake ()
 			PianoNotes.Add(noteName, pianoKey);
 			pianoKey.NoteName = noteName;
 			pianoKey.PianoKeyController = this;
+
+			if (!NoMultiAudioSource && PrewarmAudioSourcesPerKey > 1 && pianoKey != null)
+				pianoKey.EnsureAudioSourcePool(PrewarmAudioSourcesPerKey);
 				
 				count++;
 			}

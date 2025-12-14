@@ -71,6 +71,41 @@ void Awake()
 		_guideHighlightColour = new Color(1f, 0.92f, 0.2f, 1f);
 	}
 
+	/// <summary>
+	/// 連打時に AddComponent<AudioSource>() が走って一瞬詰まるのを防ぐため、AudioSource を事前に確保する。
+	/// </summary>
+	public void EnsureAudioSourcePool(int minCount)
+	{
+		minCount = Mathf.Max(1, minCount);
+
+		if (AudioSources == null)
+		{
+			AudioSources = new List<AudioSource>();
+		}
+
+		if (AudioSources.Count == 0)
+		{
+			var src = GetComponent<AudioSource>();
+			if (src != null)
+			{
+				AudioSources.Add(src);
+				CurrentAudioSource = src;
+			}
+		}
+
+		if (CurrentAudioSource == null && AudioSources.Count > 0)
+		{
+			CurrentAudioSource = AudioSources[0];
+		}
+
+		if (CurrentAudioSource == null) return;
+
+		while (AudioSources.Count < minCount)
+		{
+			AudioSources.Add(CloneAudioSource());
+		}
+	}
+
 	// Update is called once per frame
 void Update()
 {
@@ -83,7 +118,14 @@ void Update()
 
 	if (PianoKeyController.KeyMode == KeyMode.Physical)
 	{
-		if (transform.eulerAngles.x > 350 && transform.eulerAngles.x < 359.5f && !_played)
+		float x = transform.eulerAngles.x;
+		if (x < 180f) x += 360f; // 0..180 を 360..540 に補正（キーは 352..360 付近で動く前提）
+
+		float enter = PianoKeyController != null ? PianoKeyController.PhysicalPressEnterAngleX : 359.5f;
+		float exit = PianoKeyController != null ? PianoKeyController.PhysicalPressExitAngleX : 359.8f;
+		if (exit < enter) exit = enter;
+
+		if (x <= enter && !_played)
 			{
 				if (CurrentAudioSource.clip)
 					StartCoroutine(PlayPressedAudio());
@@ -96,7 +138,7 @@ void Update()
 					FadeList();
 				}
 			}
-			else if (transform.eulerAngles.x > 359.9 || transform.eulerAngles.x < 350)
+			else if (x >= exit && _played)
 			{
 				FadeAll();
 				
