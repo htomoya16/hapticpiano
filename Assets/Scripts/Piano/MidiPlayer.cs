@@ -51,7 +51,7 @@ void Start ()
 #endif
 			_midi = new MidiFileInspector(_path);
 			
-			OnPlayTrack.Invoke();
+			OnPlayTrack?.Invoke();
 		}
 	}
 
@@ -114,7 +114,7 @@ void Update ()
 		PlayCurrentMIDI();
 	}
 
-void PlayCurrentMIDI()
+public void PlayCurrentMIDI()
 {
 	_timer = 0;
 
@@ -128,7 +128,39 @@ void PlayCurrentMIDI()
 	MidiNotes = _midi.GetNotes();
 	_noteIndex = 0;
 
-	OnPlayTrack.Invoke();
+	OnPlayTrack?.Invoke();
+	}
+
+	/// <summary>
+	/// StreamingAssets/MIDI 配下の .mid を 1 曲だけ再生する（シリアライズ設定は変更しない想定で、ランタイムで差し替える）。
+	/// </summary>
+	public void PlaySongByFileName(string songFileNameNoExt, float speed = 1f, string details = "", bool loop = false)
+	{
+		if (string.IsNullOrEmpty(songFileNameNoExt)) return;
+
+		MIDISongs = new MidiSong[]
+		{
+			new MidiSong
+			{
+				SongFileName = songFileNameNoExt,
+				Speed = speed,
+				Details = details ?? ""
+			}
+		};
+
+		_midiIndex = 0;
+		RepeatType = loop ? RepeatType.RepeatLoop : RepeatType.NoRepeat;
+		_preset = false;
+
+		PlayCurrentMIDI();
+	}
+
+	public void StopPlayback()
+	{
+		_midi = null;
+		MidiNotes = Array.Empty<MidiNote>();
+		_noteIndex = 0;
+		_timer = 0;
 	}
 
 	[ContextMenu("Preset MIDI")]

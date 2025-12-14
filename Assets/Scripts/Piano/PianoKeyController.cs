@@ -94,7 +94,9 @@ void Awake ()
 			PianoKey pianoKey = PianoKeysParent.GetChild(i).GetComponent<PianoKey>();
 			
 			keyAudioSource.clip = Notes[count];
-			PianoNotes.Add(KeyString(count + Array.IndexOf(_keyIndex, StartKey)), pianoKey);
+			string noteName = KeyString(count + Array.IndexOf(_keyIndex, StartKey));
+			PianoNotes.Add(noteName, pianoKey);
+			pianoKey.NoteName = noteName;
 			pianoKey.PianoKeyController = this;
 				
 				count++;

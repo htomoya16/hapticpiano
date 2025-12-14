@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -7,6 +8,16 @@ public class PianoKey : MonoBehaviour
 	public List<AudioSource> AudioSources { get; set; }
 	public AudioSource CurrentAudioSource { get; set; }
 	public PianoKeyController PianoKeyController { get; set; }
+
+	/// <summary>
+	/// PianoKeyController から割り当てられるノート名（例: C4, F#5）。
+	/// </summary>
+	public string NoteName { get; set; }
+
+	/// <summary>
+	/// 物理モードで鍵盤が押下判定された瞬間に発火する。
+	/// </summary>
+	public event Action<string> Pressed;
 
 	public bool Sustain { get; set; }
 	public float SustainSeconds { get; set; }
@@ -21,6 +32,8 @@ public class PianoKey : MonoBehaviour
 	private Color _originalColour;
 	private float _Timer;
 	private float _keyAngle = 360f;
+	private bool _guideHighlight;
+	private Color _guideHighlightColour;
 
 	private Vector3 _position;
 	private Vector3 _rotation;
@@ -55,6 +68,7 @@ void Awake()
 
 		Material = GetComponent<MeshRenderer>().material;
 		_originalColour = Material.color;
+		_guideHighlightColour = new Color(1f, 0.92f, 0.2f, 1f);
 	}
 
 	// Update is called once per frame
@@ -74,6 +88,7 @@ void Update()
 				if (CurrentAudioSource.clip)
 					StartCoroutine(PlayPressedAudio());
 
+				Pressed?.Invoke(NoteName);
 				_played = true;
 
 				if (_toFade.Count > 0)
@@ -133,7 +148,7 @@ void KeyPlayMechanics()
 		// スプリング/重力を一時無効化し、トルクで押し込み再現
 		_springJoint.useSpring = false;
 		_constantForce.enabled = false;
-		
+	
 		if (transform.eulerAngles.x < 1 || transform.eulerAngles.x > 359.5f)
 		{
 				_rigidbody.AddTorque(-Vector3.right * _velocity / 1024f);
@@ -165,7 +180,7 @@ void KeyPlayMechanics()
 	}
 	else
 	{
-		Material.color = _originalColour; // 色を元に戻し、物理を再有効化
+		ApplyGuideVisual(); // 色を元に戻し（ガイドがあれば維持）、物理を再有効化
 		_constantForce.enabled = true;
 		_springJoint.useSpring = true;
 		_play = false;
@@ -330,5 +345,24 @@ void PlayVirtualAudio()
 		newAudioSource.outputAudioMixerGroup = CurrentAudioSource.outputAudioMixerGroup;
 
 		return newAudioSource;
+	}
+
+	public void SetGuideHighlight(bool on, Color colour)
+	{
+		_guideHighlight = on;
+		_guideHighlightColour = colour;
+		ApplyGuideVisual();
+	}
+
+	public void ClearGuideHighlight()
+	{
+		_guideHighlight = false;
+		ApplyGuideVisual();
+	}
+
+	private void ApplyGuideVisual()
+	{
+		if (Material == null) return;
+		Material.color = _guideHighlight ? _guideHighlightColour : _originalColour;
 	}
 }
