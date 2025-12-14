@@ -10631,14 +10631,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   PianoKeyDetector: {fileID: 533664310}
+  AutoPlayOnStart: 1
+  DisableAutoPlayIfEvaluationScene: 1
   GlobalSpeed: 1
   RepeatType: 0
   KeyMode: 0
   ShowMIDIChannelColours: 1
   MIDIChannelColours:
-  - {r: 0, g: 0, b: 0, a: 0}
-  - {r: 0.3372549, g: 0.6156863, b: 0.06666667, a: 1}
-  - {r: 0.21568629, g: 0.41960788, b: 0.68235296, a: 1}
+  - {r: 0.15294118, g: 0.7764706, b: 0.13725491, a: 1}
   MIDISongs:
   - MIDIFile: {fileID: 102900000, guid: f2bdafb14ebf0414496c84e4dc0ed984, type: 3}
     SongFileName: twinkle_twinkle_60bpm_12bars
