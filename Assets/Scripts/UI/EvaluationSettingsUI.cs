@@ -66,6 +66,13 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     [Range(0.1f, 1f)]
     public float buttonPressedMultiplier = 0.9f;
 
+    [Header("Utility Buttons (optional)")]
+    [Tooltip("休憩（カウントダウン）をスキップするボタン（任意）。休憩中のみ押せる。")]
+    public Button skipRestButton;
+
+    [Tooltip("きらきら星タスクを終了して次タスクへ進むボタン（任意）。きらきら星演奏タスク中のみ押せる。")]
+    public Button nextTaskButton;
+
     [Header("Behavior")]
     [Tooltip("ボタン操作後に設定画面を閉じる")]
     public bool closeOverlayAfterAction = true;
@@ -143,6 +150,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         }
 
         ApplyTaskButtonState();
+        ApplyUtilityButtonsState();
     }
 
     private void OnDisable()
@@ -157,6 +165,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         _prevLocked = evaluation.HasParticipantInfoLocked;
         ApplyIdNameLockState(_prevLocked);
         ApplyTaskButtonState();
+        ApplyUtilityButtonsState();
         ApplySelectionButtonLabels();
 
         if (participantIdInput != null)
@@ -177,7 +186,9 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
         if (statusText != null)
         {
-            string groupCore = evaluation.group == EvaluationGroup.A ? "A（順序: no→yes / yes→no）" : "B（順序: yes→no / no→yes）";
+            string groupCore = evaluation.group == EvaluationGroup.A
+                ? "A（順序: Accuracy なし→あり / Twinkle なし→あり）"
+                : "B（順序: Accuracy あり→なし / Twinkle あり→なし）";
             string group = evaluation.HasExplicitGroupSelection ? groupCore : $"(未選択) {groupCore}";
             bool isTouchOn = evaluation.condition == EvaluationCondition.TouchOn;
             string cond = isTouchOn ? "touch_on" : "touch_off";
@@ -332,6 +343,29 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         AfterAction(forceCloseOverlay: true);
     }
 
+    /// <summary>
+    /// 休憩（カウントダウン）をスキップする。
+    /// </summary>
+    public void SkipRestCountdown()
+    {
+        if (evaluation == null) return;
+        if (!evaluation.IsCountdownActive) return;
+        evaluation.SkipRestCountdown();
+        AfterAction(forceCloseOverlay: true);
+    }
+
+    /// <summary>
+    /// きらきら星（演奏）タスクを終了して次タスクへ進む。
+    /// </summary>
+    public void GoNextTask()
+    {
+        if (evaluation == null) return;
+        if (!evaluation.IsTaskRunning) return;
+        if (evaluation.ActiveTaskId != "twinkle") return;
+        evaluation.StopCurrentTask();
+        AfterAction(forceCloseOverlay: true);
+    }
+
     private void AfterAction(bool forceCloseOverlay = false)
     {
         Refresh();
@@ -406,6 +440,26 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
             {
                 manualSelectionText.text = label;
             }
+        }
+    }
+
+    private void ApplyUtilityButtonsState()
+    {
+        if (evaluation == null) return;
+
+        bool canSkipRest = evaluation.IsCountdownActive;
+        bool canNextTask = evaluation.IsTaskRunning && evaluation.ActiveTaskId == "twinkle";
+
+        if (skipRestButton != null)
+        {
+            if (skipRestButton.gameObject.activeSelf != canSkipRest) skipRestButton.gameObject.SetActive(canSkipRest);
+            skipRestButton.interactable = canSkipRest;
+        }
+
+        if (nextTaskButton != null)
+        {
+            if (nextTaskButton.gameObject.activeSelf != canNextTask) nextTaskButton.gameObject.SetActive(canNextTask);
+            nextTaskButton.interactable = canNextTask;
         }
     }
 

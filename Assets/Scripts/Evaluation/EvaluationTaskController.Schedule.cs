@@ -3,6 +3,17 @@ using UnityEngine;
 
 public sealed partial class EvaluationTaskController : MonoBehaviour
 {
+    /// <summary>
+    /// 休憩（カウントダウン）をスキップして、直前5秒カウントダウンへ進める。
+    /// </summary>
+    public bool SkipRestCountdown()
+    {
+        if (!isCountingDown) return false;
+        _countdownEndRealtime = Time.realtimeSinceStartup;
+        TickCountdown();
+        return true;
+    }
+
     public void ResetSchedule()
     {
         scheduleStepIndex = 0;

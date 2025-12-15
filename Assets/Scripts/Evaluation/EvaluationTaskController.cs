@@ -109,7 +109,7 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
 
     [Header("Countdown")]
     [Tooltip("各タスク開始前（初回含む）の待機秒数。")]
-    public float countdownSeconds = 20f;
+    public float countdownSeconds = 60f;
 
     [SerializeField] private bool isCountingDown;
     [SerializeField] private float countdownRemainingSeconds;

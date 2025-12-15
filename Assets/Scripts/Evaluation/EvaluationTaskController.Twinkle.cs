@@ -58,11 +58,8 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             return;
         }
 
-        if (_twinkleNoteIndex >= _twinkleNotes.Length)
-        {
-            RequestEndAfterDelay(advanceSchedule: true);
-            return;
-        }
+        // きらきら星「演奏」タスクは時間制限なし（終了はユーザー操作で行う）。
+        if (_twinkleNoteIndex >= _twinkleNotes.Length) return;
 
         float ticksPerSecond = Mathf.Max(0.01f, (float)_twinkleNotes[_twinkleNoteIndex].Tempo);
         _twinkleTimerTicks += Time.deltaTime * ticksPerSecond;
@@ -82,9 +79,6 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             }
         }
 
-        if (_twinkleNoteIndex >= _twinkleNotes.Length)
-        {
-            RequestEndAfterDelay(advanceSchedule: true);
-        }
+        // MIDI末尾に到達しても自動終了しない（自由演奏を継続）
     }
 }

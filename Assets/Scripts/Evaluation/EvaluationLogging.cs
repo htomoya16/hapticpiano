@@ -67,7 +67,8 @@ public sealed class EvaluationLogSession : IDisposable
     internal static void EnsureHeader(string path, string headerLine)
     {
         if (File.Exists(path)) return;
-        using var sw = new StreamWriter(path, append: false, encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        // Windows の Excel で文字化けしにくいよう、UTF-8 with BOM で新規作成する。
+        using var sw = new StreamWriter(path, append: false, encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: true));
         sw.WriteLine(headerLine);
     }
 
