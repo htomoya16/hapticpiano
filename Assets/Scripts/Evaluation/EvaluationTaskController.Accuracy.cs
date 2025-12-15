@@ -20,6 +20,12 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         _activeTask = _session.BeginTask(ToConditionString(condition), "accuracy");
         _mode = Mode.Accuracy;
 
+        if (_activeTask != null)
+        {
+            EmitLogMessage($"task start: accuracy / {ToConditionString(condition)}");
+            EmitLogMessage($"events: {_activeTask.EventsPath}");
+        }
+
         _trialIndex = 0;
         _accuracyPlannedTrials = GetAccuracyPlannedTrials();
 
@@ -44,14 +50,14 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
 
         if (_accuracyPlannedTrials > 0 && _trialIndex >= _accuracyPlannedTrials)
         {
-            StopCurrentTask();
+            RequestEndAfterDelay(advanceSchedule: true);
             return;
         }
 
         float elapsed = Time.realtimeSinceStartup - _taskStartRealtime;
         if (elapsed >= Mathf.Max(0.01f, accuracyDurationSeconds))
         {
-            StopCurrentTask();
+            RequestEndAfterDelay(advanceSchedule: true);
             return;
         }
 
@@ -62,6 +68,11 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             float beatStartRealtime = _nextBeatRealtime;
             _nextBeatRealtime += secondsPerBeat;
             FireAccuracyBeat(beatStartRealtime);
+        }
+
+        if (_accuracyPlannedTrials > 0 && _trialIndex >= _accuracyPlannedTrials)
+        {
+            RequestEndAfterDelay(advanceSchedule: true);
         }
     }
 
@@ -123,4 +134,3 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         return accuracyPattern[pos + 1] ?? "";
     }
 }
-

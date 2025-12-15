@@ -16,6 +16,8 @@ public sealed class EvaluationLogSession : IDisposable
     public string ParticipantName => _participantName;
     public string Group => _group;
     public string RunDirectory => _runDirectory;
+    public string SummaryPath => _summaryPath;
+    public string MetaPath => _metaPath;
 
     public EvaluationLogSession(string participantId, string participantName, string group)
     {
@@ -126,14 +128,17 @@ public sealed class EvaluationLogTask : IDisposable
     private readonly string _task;
     private readonly string _startUtcIso;
     private readonly string _taskInstanceId;
+    private readonly string _eventsPath;
 
-    private readonly StreamWriter _trialsWriter;
-    private readonly StreamWriter _pressesWriter;
+    private readonly StreamWriter _eventsWriter;
     private bool _ended;
+    private int _currentTrialIndex;
 
     public string Condition => _condition;
     public string Task => _task;
     public string StartUtcIso => _startUtcIso;
+    public string TaskInstanceId => _taskInstanceId;
+    public string EventsPath => _eventsPath;
 
     internal EvaluationLogTask(EvaluationLogSession session, string condition, string task)
     {
@@ -144,14 +149,11 @@ public sealed class EvaluationLogTask : IDisposable
         _taskInstanceId = DateTimeOffset.UtcNow.ToString("yyyyMMdd_HHmmss_fff");
 
         string prefix = $"{_task}_{_condition}_{_taskInstanceId}";
-        string trialsPath = Path.Combine(_session.RunDirectory, $"{prefix}_trials.csv");
-        string pressesPath = Path.Combine(_session.RunDirectory, $"{prefix}_presses.csv");
+        _eventsPath = Path.Combine(_session.RunDirectory, $"{prefix}_events.csv");
 
-        EvaluationLogSession.EnsureHeader(trialsPath, "trial_index,beat_time,target_key");
-        EvaluationLogSession.EnsureHeader(pressesPath, "press_time,pressed_key");
+        EvaluationLogSession.EnsureHeader(_eventsPath, "event_time,event_type,trial_index,beat_time,target_key,pressed_key");
 
-        _trialsWriter = new StreamWriter(trialsPath, append: true, encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
-        _pressesWriter = new StreamWriter(pressesPath, append: true, encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
+        _eventsWriter = new StreamWriter(_eventsPath, append: true, encoding: new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
     }
 
     public void LogTrial(int trialIndex, string targetKey)
@@ -162,21 +164,31 @@ public sealed class EvaluationLogTask : IDisposable
     public void LogTrial(int trialIndex, string beatTimeUtcIso, string targetKey)
     {
         if (_ended) return;
-        _trialsWriter.WriteLine(string.Join(",",
+        _currentTrialIndex = Mathf.Max(_currentTrialIndex, trialIndex);
+
+        string eventTime = EvaluationLogSession.NowUtcIso();
+        _eventsWriter.WriteLine(string.Join(",",
+            EvaluationLogSession.Csv(eventTime),
+            "trial",
             trialIndex.ToString(),
             EvaluationLogSession.Csv(beatTimeUtcIso ?? ""),
-            EvaluationLogSession.Csv(targetKey ?? "")));
-        _trialsWriter.Flush();
+            EvaluationLogSession.Csv(targetKey ?? ""),
+            ""));
+        _eventsWriter.Flush();
     }
 
     public void LogPress(string pressedKey)
     {
         if (_ended) return;
         string t = EvaluationLogSession.NowUtcIso();
-        _pressesWriter.WriteLine(string.Join(",",
+        _eventsWriter.WriteLine(string.Join(",",
             EvaluationLogSession.Csv(t),
+            "press",
+            _currentTrialIndex > 0 ? _currentTrialIndex.ToString() : "",
+            "",
+            "",
             EvaluationLogSession.Csv(pressedKey ?? "")));
-        _pressesWriter.Flush();
+        _eventsWriter.Flush();
     }
 
     public void End()
@@ -192,7 +204,6 @@ public sealed class EvaluationLogTask : IDisposable
 
     public void Dispose()
     {
-        try { _trialsWriter?.Dispose(); } catch { }
-        try { _pressesWriter?.Dispose(); } catch { }
+        try { _eventsWriter?.Dispose(); } catch { }
     }
 }

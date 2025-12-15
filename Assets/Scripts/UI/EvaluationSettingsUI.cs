@@ -9,6 +9,13 @@ using UnityEngine.UI;
 [DisallowMultipleComponent]
 public sealed class EvaluationSettingsUI : MonoBehaviour
 {
+    public enum ManualAction
+    {
+        AccuracyDemo = 0,
+        TwinkleDemo = 1,
+        ScheduledTasks = 2,
+    }
+
     [Header("References")]
     public SettingsOverlayOpener overlayOpener;
     public EvaluationTaskController evaluation;
@@ -18,6 +25,16 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     public TMP_InputField participantIdInput;
     public TMP_InputField participantNameInput;
 
+    [Header("Selection Buttons (optional labels)")]
+    [Tooltip("『打鍵精度タスク（デモ）』選択ボタンの表示テキスト（任意）。グループA/Bが分かるように末尾を更新する。")]
+    public TMP_Text selectAccuracyDemoLabel;
+
+    [Tooltip("『きらきら星（デモ）』選択ボタンの表示テキスト（任意）。グループA/Bが分かるように末尾を更新する。")]
+    public TMP_Text selectTwinkleDemoLabel;
+
+    [Tooltip("『一連のタスク』選択ボタンの表示テキスト（任意）。グループA/Bが分かるように末尾を更新する。")]
+    public TMP_Text selectScheduledTasksLabel;
+
     [Header("Task Button (Start/Abort)")]
     [Tooltip("タスク開始/中止のボタンルート（ラベル切替用）。")]
     public GameObject taskButtonRoot;
@@ -25,7 +42,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     [Tooltip("タスク開始/中止ボタン（interactable 切替用）。")]
     public Button taskButton;
 
-    [Tooltip("ボタンの表示テキスト（『タスクスタート』『中止』『完了』を切替）。")]
+    [Tooltip("ボタンの表示テキスト（『スタート』『中止』『完了』を切替）。")]
     public TMP_Text taskButtonLabel;
 
     [Header("Task Button (Color)")]
@@ -52,6 +69,13 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
     [Header("Behavior")]
     [Tooltip("ボタン操作後に設定画面を閉じる")]
     public bool closeOverlayAfterAction = true;
+
+    [Header("Selection")]
+    [Tooltip("開始ボタンで実行する内容（3択）。")]
+    public ManualAction manualSelection = ManualAction.AccuracyDemo;
+
+    [Tooltip("現在の選択を表示するテキスト（任意）。")]
+    public TMP_Text manualSelectionText;
 
     [Tooltip("入力欄の編集終了（Enter/フォーカス解除）で自動適用する")]
     public bool applyOnEndEdit = true;
@@ -133,6 +157,7 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         _prevLocked = evaluation.HasParticipantInfoLocked;
         ApplyIdNameLockState(_prevLocked);
         ApplyTaskButtonState();
+        ApplySelectionButtonLabels();
 
         if (participantIdInput != null)
         {
@@ -255,39 +280,56 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         SetConditionTouchOn(); // B は最初が touch_on
     }
 
-    public void PlayTrainingDemoOnce()
+    public void SelectAccuracyDemo()
     {
-        if (evaluation == null) return;
-        evaluation.PlayTrainingMidiDemoOnce();
-        AfterAction(forceCloseOverlay: true);
+        manualSelection = ManualAction.AccuracyDemo;
+        Refresh();
     }
 
-    public void PlayAccuracyPatternDemoOnce()
+    public void SelectTwinkleDemo()
     {
-        if (evaluation == null) return;
-        evaluation.PlayAccuracyPatternDemoOnce();
-        AfterAction(forceCloseOverlay: true);
+        manualSelection = ManualAction.TwinkleDemo;
+        Refresh();
+    }
+
+    public void SelectScheduledTasks()
+    {
+        manualSelection = ManualAction.ScheduledTasks;
+        Refresh();
     }
 
     /// <summary>
-    /// 1つのボタンで運用するためのメイン操作。
-    /// - 待機中: 次のタスク開始（20秒カウントダウン開始）
-    /// - 実行中/カウントダウン中: 中止（停止/キャンセル）
+    /// 選択式（manualSelection）の Start/Abort。
+    /// - 待機中: 選択されたデモ/タスクを開始
+    /// - 実行中/カウントダウン中/デモ中: 中止
     /// </summary>
-    public void TaskStartOrAbort()
+    public void StartOrAbortSelected()
     {
         if (evaluation == null) return;
 
         if (CanStopNow())
         {
-            evaluation.StopCurrentTask();
-        }
-        else
-        {
-            evaluation.BeginCountdownToNextScheduledTask();
+            evaluation.AbortCurrentTask();
+            AfterAction(forceCloseOverlay: true);
+            return;
         }
 
-        AfterAction();
+        if (!CanStartSelectedNow()) return;
+
+        switch (manualSelection)
+        {
+            case ManualAction.AccuracyDemo:
+                evaluation.PlayAccuracyPatternDemoOnce();
+                break;
+            case ManualAction.TwinkleDemo:
+                evaluation.PlayTrainingMidiDemoOnce();
+                break;
+            case ManualAction.ScheduledTasks:
+                evaluation.BeginCountdownToNextScheduledTask();
+                break;
+        }
+
+        AfterAction(forceCloseOverlay: true);
     }
 
     private void AfterAction(bool forceCloseOverlay = false)
@@ -302,16 +344,22 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
 
     private bool CanStopNow()
     {
-        return evaluation != null && (evaluation.IsTaskRunning || evaluation.IsCountdownActive || evaluation.IsTaskIntroActive);
+        return evaluation != null && (evaluation.IsTaskRunning || evaluation.IsCountdownActive || evaluation.IsTaskIntroActive || evaluation.IsAnyDemoRunning);
     }
 
-    private bool CanStartNow()
+    private bool CanStartSelectedNow()
     {
         if (evaluation == null) return false;
-        if (!evaluation.useGroupSchedule) return false;
-        if (evaluation.IsTaskRunning || evaluation.IsCountdownActive) return false;
-        if (!evaluation.HasExplicitGroupSelection) return false;
-        return evaluation.GetScheduleIndex() < evaluation.GetScheduleLength();
+        if (evaluation.IsTaskRunning || evaluation.IsCountdownActive || evaluation.IsTaskIntroActive) return false;
+        if (evaluation.IsAnyDemoRunning) return false;
+
+        if (manualSelection == ManualAction.ScheduledTasks)
+        {
+            if (!evaluation.useGroupSchedule) return false;
+            if (!evaluation.HasExplicitGroupSelection) return false;
+            if (evaluation.GetScheduleIndex() >= evaluation.GetScheduleLength()) return false;
+        }
+        return true;
     }
 
     private void ApplyTaskButtonState()
@@ -319,12 +367,17 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         if (evaluation == null) return;
 
         bool canStop = CanStopNow();
-        bool canStart = CanStartNow();
-        bool done = !canStop && !canStart && evaluation.useGroupSchedule && evaluation.GetScheduleLength() > 0 && evaluation.GetScheduleIndex() >= evaluation.GetScheduleLength();
+        bool canStart = CanStartSelectedNow();
+
+        bool scheduleDone = evaluation.useGroupSchedule &&
+            evaluation.GetScheduleLength() > 0 &&
+            evaluation.GetScheduleIndex() >= evaluation.GetScheduleLength();
+
+        bool done = !canStop && scheduleDone && manualSelection == ManualAction.ScheduledTasks;
 
         if (taskButtonLabel != null)
         {
-            taskButtonLabel.text = done ? "完了" : (canStop ? "中止" : "タスクスタート");
+            taskButtonLabel.text = done ? "完了" : (canStop ? "中止" : "スタート");
         }
 
         if (taskButton != null)
@@ -341,7 +394,51 @@ public sealed class EvaluationSettingsUI : MonoBehaviour
         {
             taskButtonRoot.SetActive(true);
         }
+
+        if (manualSelectionText != null)
+        {
+            string label = GetManualSelectionLabelJa(manualSelection);
+            if (manualSelection == ManualAction.ScheduledTasks)
+            {
+                manualSelectionText.text = $"{label}{GetGroupSuffixShort()}";
+            }
+            else
+            {
+                manualSelectionText.text = label;
+            }
+        }
     }
+
+    private void ApplySelectionButtonLabels()
+    {
+        if (evaluation == null) return;
+
+        string groupSuffix = GetGroupSuffixShort();
+
+        // 選択ボタン自体の表示にもグループを出しておく（スタートボタンはグループで文字を変えない）
+        if (selectAccuracyDemoLabel != null) selectAccuracyDemoLabel.text = $"打鍵精度タスク（デモ）{groupSuffix}";
+        if (selectTwinkleDemoLabel != null) selectTwinkleDemoLabel.text = $"きらきら星（デモ）{groupSuffix}";
+        if (selectScheduledTasksLabel != null) selectScheduledTasksLabel.text = $"一連のタスク{groupSuffix}";
+    }
+
+    private string GetGroupSuffixShort()
+    {
+        if (evaluation == null) return "";
+        if (!evaluation.HasExplicitGroupSelection) return "（A/B未選択）";
+        return evaluation.group == EvaluationGroup.A ? "（A）" : "（B）";
+    }
+
+    private static string GetManualSelectionLabelJa(ManualAction a)
+    {
+        switch (a)
+        {
+            case ManualAction.AccuracyDemo: return "打鍵精度タスク（デモ）";
+            case ManualAction.TwinkleDemo: return "きらきら星（デモ）";
+            case ManualAction.ScheduledTasks: return "一連のタスク";
+            default: return a.ToString();
+        }
+    }
+
 
     private void ApplyButtonTint(Button b, Color baseColor)
     {

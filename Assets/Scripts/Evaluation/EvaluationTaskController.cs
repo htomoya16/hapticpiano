@@ -83,6 +83,9 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     public string twinkleMidiFileNameNoExt = "twinkle_twinkle_60bpm_12bars";
     public bool logTwinkleTargets = true;
 
+    [Tooltip("きらきら星タスクのガイドを『点灯→フェードアウト』させる秒数（0以下ならフェードなし）。")]
+    public float twinkleGuideFadeSeconds = 0.7f;
+
     [Header("Training Demo")]
     [Tooltip("デモ（きらきら星）をボタン押下後に開始するまでの遅延（秒）。")]
     public float trainingDemoDelaySeconds = 3f;
@@ -118,6 +121,10 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     [Tooltip("各タスク開始直前に行う『準備』カウントダウン（秒）。説明表示の猶予として使う。")]
     public float taskIntroSeconds = 5f;
 
+    [Header("Task End Delay")]
+    [Tooltip("タスクが規定回数/終端に到達したあと、終了扱いにするまでの遅延（秒）。")]
+    public float taskEndDelaySeconds = 3f;
+
     [SerializeField] private bool isTaskIntroActive;
     [SerializeField] private float taskIntroRemainingSeconds;
     private float _taskIntroEndRealtime;
@@ -134,6 +141,10 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     private float _nextBeatRealtime;
     private int _trialIndex;
     private int _accuracyPlannedTrials;
+
+    private bool _isTaskEndPending;
+    private float _taskEndEndRealtime;
+    private bool _taskEndAdvanceSchedule;
 
     private MidiNote[] _twinkleNotes;
     private int _twinkleNoteIndex;
@@ -164,6 +175,17 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         {
             if (IsTaskRunning) return ActiveTaskId;
             if (isTaskIntroActive && _hasIntroStep) return ToTaskId(_introStep.task);
+            return "none";
+        }
+    }
+
+    public string NextOrIntroTaskId
+    {
+        get
+        {
+            if (IsTaskRunning) return ActiveTaskId;
+            if (isTaskIntroActive && _hasIntroStep) return ToTaskId(_introStep.task);
+            if (isCountingDown && _hasPendingStep) return ToTaskId(_pendingStep.task);
             return "none";
         }
     }
@@ -199,6 +221,9 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
 
     private void Update()
     {
+        TickPendingTaskEnd();
+        if (_isTaskEndPending) return;
+
         TickCountdown();
         TickTaskIntro();
 

@@ -131,6 +131,15 @@ void Update()
 		float exit = PianoKeyController != null ? PianoKeyController.PhysicalPressExitAngleX : 359.8f;
 		if (exit < enter) exit = enter;
 
+		// デモ（ForShow）から戻した直後、押下アニメーションが残っていると「物理押下」と誤判定して音が二重に鳴り得る。
+		// 抑制中はイベント発火を止めつつ、_played 状態だけ同期して「抑制解除後の誤発火」も防ぐ。
+		if (PianoKeyController != null && PianoKeyController.IsPhysicalPressSuppressed)
+		{
+			if (x <= enter) _played = true;
+			else if (x >= exit) _played = false;
+			return;
+		}
+
 		if (x <= enter && !_played)
 			{
 				if (CurrentAudioSource.clip)

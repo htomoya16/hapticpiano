@@ -20,10 +20,10 @@
 
 - Aグループ：
   - Accuracy：`touch_off → touch_on`
-  - Twinkle：`touch_on → touch_off`
+  - Twinkle：`touch_off → touch_on`
 - Bグループ（逆順）：
   - Accuracy：`touch_on → touch_off`
-  - Twinkle：`touch_off → touch_on`
+  - Twinkle：`touch_on → touch_off`
 
 ## タスク構成
 評価は「主要評価（客観）＋副次評価（主観）」で構成する。
@@ -40,17 +40,19 @@
 
 ### 2) 副次評価：演奏タスク（Twinkle）
 - きらきら星（Twinkle Little Star）
-- ガイド（光る鍵盤）を提示する
-- 余裕があればログも取得する（ターゲット提示＋押下イベント）
+- ガイド（光る鍵盤）の提示は行わない（自由に演奏してもらう）
+- ログは取得する（内部ターゲット提示＋押下イベント）
 
 ### 事前練習（トレーニング）
 - 本評価の学習効果を切り離すためのフェーズ。
-- **きらきら星は練習に含めない**。
-- 代わりに「ガイドに従って演奏するイメージ」を掴むため、`MidiPlayer` で **デモ再生を1回**流す。
+- 本番タスクとは別に、Unity 上でデモを実行できるようにする：
+  - きらきら星（`MidiPlayer` によるデモ再生）
+  - 打鍵精度（テンポに合わせたガイド＋発音のデモ）
 
 ## タスク間インターバル（VR表示）
 - 各タスク開始前（初回含む）に **20秒** のインターバルを設ける。
-- インターバル中は VR 内に「次のタスク説明」と「開始までのカウントダウン」を表示する。
+- インターバル中は VR 内に「次のタスク説明」「休憩時間（残り秒）」「補足説明（文章＋図）」を表示する。
+- インターバル終了後、開始直前に **5秒カウントダウン** を行う（表示は `5,4,3,2,1` の数字のみ）。
 
 ## ログ設計（CSV）
 ログは `Application.persistentDataPath` 配下へ保存し、解析にそのまま使える CSV とする。
@@ -68,14 +70,14 @@
   - 何のため：タスクの開始/終了、条件、タスク種別の一覧（全体のインデックス）
   - いつ出る：各タスク終了時（中止/自動終了を含む）
   - カラム：`start_time,end_time,participant_id,condition,task`
-- `{task}_{condition}_{task_instance_id}_trials.csv`（正解ターゲット：trial=1行）
-  - 何のため：ガイドとして提示した「正解ターゲット」の時系列
-  - いつ出る：各タスク開始時にファイル作成され、trialのたびに追記
-  - カラム：`trial_index,beat_time,target_key`
-- `{task}_{condition}_{task_instance_id}_presses.csv`（実入力：押下=1行）
-  - 何のため：実際に押されたキーの時系列
-  - いつ出る：各タスク開始時にファイル作成され、押下のたびに追記
-  - カラム：`press_time,pressed_key`
+- `{task}_{condition}_{task_instance_id}_events.csv`（統合ログ：イベント=1行）
+  - 何のため：ターゲット提示（trial）と実押下（press）を時系列で1ファイルにまとめる
+  - いつ出る：各タスク開始時にファイル作成され、イベントのたびに追記
+  - カラム：`event_time,event_type,trial_index,beat_time,target_key,pressed_key`
+    - `event_type`：`trial` / `press`
+    - `beat_time` / `target_key` は `trial` 行のみ埋まる
+    - `pressed_key` は `press` 行のみ埋まる
+    - `trial_index`（press 行）は、その時点の「直近の trial」を指す（未開始なら空）
 
 補足（ファイル名の意味）
 - `task`：`accuracy` / `twinkle`
@@ -83,17 +85,16 @@
 - `task_instance_id`：同一セッション内で複数回タスクを回したときに、ファイル名が衝突しないよう付与する一意ID（UTC）
 
 ファイル名の例
-- `accuracy_touch_off_20251214_123456_123_trials.csv`
-- `accuracy_touch_off_20251214_123456_123_presses.csv`
+- `accuracy_touch_off_20251214_123456_123_events.csv`
 
-### trials / presses の意味
-- `*_trials.csv`：その時点で提示した「正解ターゲット」側（Accuracy は拍、Twinkle はノート）
-- `*_presses.csv`：実際の押下イベント側（押した時刻＋押したキー）
+### events の意味
+- `event_type=trial`：その時点で提示した「正解ターゲット」側（Accuracy は拍、Twinkle はノート）
+- `event_type=press`：実際の押下イベント側（押した時刻＋押したキー）
 
 ### 時刻の基準
 - すべて UTC（ISO 8601）で保存する。
-- `press_time`：鍵盤の物理押下判定が成立した瞬間（入力イベント発火タイミング）。
-- `beat_time`：
+- `event_time`：行が記録された時刻。
+- `beat_time`（trial行）：
   - Accuracy：メトロノームの「拍の開始」を狙った時刻（実装は realtime を UTC に変換）。
   - Twinkle：MIDI ノートを「処理してガイド提示した」タイミング（厳密な音声再生時刻ではない）。
 

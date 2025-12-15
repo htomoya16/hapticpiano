@@ -3,9 +3,63 @@ using UnityEngine;
 
 public sealed partial class EvaluationTaskController : MonoBehaviour
 {
+    private void ClearPendingTaskEnd()
+    {
+        _isTaskEndPending = false;
+        _taskEndEndRealtime = 0f;
+        _taskEndAdvanceSchedule = true;
+    }
+
+    private void RequestEndAfterDelay(bool advanceSchedule)
+    {
+        if (_mode == Mode.None && _activeTask == null) return;
+        if (_isTaskEndPending) return;
+
+        float delay = Mathf.Max(0f, taskEndDelaySeconds);
+        if (delay <= 0f)
+        {
+            StopCurrentTaskInternal(advanceSchedule);
+            return;
+        }
+
+        _isTaskEndPending = true;
+        _taskEndAdvanceSchedule = advanceSchedule;
+        _taskEndEndRealtime = Time.realtimeSinceStartup + delay;
+    }
+
+    private void TickPendingTaskEnd()
+    {
+        if (!_isTaskEndPending) return;
+        if (Time.realtimeSinceStartup < _taskEndEndRealtime) return;
+
+        bool advance = _taskEndAdvanceSchedule;
+        ClearPendingTaskEnd();
+        StopCurrentTaskInternal(advance);
+    }
+
+    private void EmitLogMessage(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message)) return;
+        Debug.Log($"[Evaluation] {message}", this);
+    }
+
     [ContextMenu("Eval/Stop Current Task")]
     public void StopCurrentTask()
     {
+        ClearPendingTaskEnd();
+        StopCurrentTaskInternal(advanceSchedule: true);
+    }
+
+    [ContextMenu("Eval/Abort Current Task")]
+    public void AbortCurrentTask()
+    {
+        ClearPendingTaskEnd();
+        StopCurrentTaskInternal(advanceSchedule: false);
+    }
+
+    private void StopCurrentTaskInternal(bool advanceSchedule)
+    {
+        ClearPendingTaskEnd();
         CancelTrainingDemo();
         CancelAccuracyPatternDemo();
 
@@ -39,10 +93,24 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         ClearHighlight();
         ClearAllGuideHighlights();
 
+        string endedTaskName = _activeTask != null ? _activeTask.Task : "unknown";
+        string endedCondition = _activeTask != null ? _activeTask.Condition : "unknown";
+        string endedStartUtc = _activeTask != null ? _activeTask.StartUtcIso : "";
+        string endedEvents = _activeTask != null ? _activeTask.EventsPath : "";
+
         _activeTask?.End();
         _activeTask = null;
 
         RestoreHapticsIfNeeded();
+
+        if (!string.IsNullOrEmpty(endedTaskName))
+        {
+            EmitLogMessage($"task end: {endedTaskName} / {endedCondition} (start={endedStartUtc})");
+            if (!string.IsNullOrEmpty(endedEvents)) EmitLogMessage($"saved: {endedEvents}");
+            if (_session != null) EmitLogMessage($"saved: {_session.SummaryPath}");
+        }
+
+        if (!advanceSchedule) return;
 
         if (endedTask && useGroupSchedule)
         {
@@ -105,7 +173,9 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     {
         if (_session != null) return;
         _session = new EvaluationLogSession(participantId, participantName, group.ToString());
-        Debug.Log($"[EvaluationTaskController] Log folder: {_session.RunDirectory}", this);
+        EmitLogMessage($"ログ保存先: {_session.RunDirectory}");
+        EmitLogMessage($"session_meta.csv: {_session.MetaPath}");
+        EmitLogMessage($"task_summary.csv: {_session.SummaryPath}");
     }
 
     public void ResetLogSession()
@@ -172,6 +242,7 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     private void OnPianoKeyPressed(string systemNoteName)
     {
         if (_activeTask == null) return;
+        if (_isTaskEndPending) return;
         _activeTask.LogPress(ToCanonicalNoteName(systemNoteName ?? ""));
     }
 
@@ -229,4 +300,3 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         return int.TryParse(noteName.Substring(idx), out octave);
     }
 }
-

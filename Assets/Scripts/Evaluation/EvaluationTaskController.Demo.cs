@@ -3,6 +3,28 @@ using UnityEngine;
 
 public sealed partial class EvaluationTaskController : MonoBehaviour
 {
+    private bool _trainingDemoPlaying;
+    private KeyMode _trainingDemoPrevKeyMode;
+    private Coroutine _trainingDemoPlaybackWatchCoroutine;
+
+    private bool _accuracyDemoPlaying;
+    private KeyMode _accuracyDemoPrevKeyMode;
+
+    public bool IsAnyDemoRunning =>
+        _trainingDemoCoroutine != null ||
+        _trainingDemoPlaybackWatchCoroutine != null ||
+        _trainingDemoPlaying ||
+        _accuracyDemoCoroutine != null;
+
+    public bool IsTrainingMidiDemoRunning =>
+        _trainingDemoCoroutine != null ||
+        _trainingDemoPlaybackWatchCoroutine != null ||
+        _trainingDemoPlaying;
+
+    public bool IsAccuracyPatternDemoRunning =>
+        _accuracyDemoCoroutine != null ||
+        _accuracyDemoPlaying;
+
     [ContextMenu("Eval/Play Training MIDI Demo Once")]
     public void PlayTrainingMidiDemoOnce()
     {
@@ -65,8 +87,20 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     private void StartTrainingDemoNow()
     {
         if (midiPlayer == null) return;
+        _trainingDemoPrevKeyMode = midiPlayer.KeyMode;
         midiPlayer.KeyMode = KeyMode.ForShow;
         midiPlayer.PlaySongByFileName(twinkleMidiFileNameNoExt, speed: 1f, details: "Training Demo", loop: false);
+
+        _trainingDemoPlaying = true;
+
+        if (_trainingDemoPlaybackWatchCoroutine != null)
+        {
+            StopCoroutine(_trainingDemoPlaybackWatchCoroutine);
+            _trainingDemoPlaybackWatchCoroutine = null;
+        }
+
+        int token = _trainingDemoToken;
+        _trainingDemoPlaybackWatchCoroutine = StartCoroutine(TrainingDemoWatchPlayback(token));
     }
 
     private void CancelTrainingDemo()
@@ -77,6 +111,46 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             StopCoroutine(_trainingDemoCoroutine);
             _trainingDemoCoroutine = null;
         }
+
+        if (_trainingDemoPlaybackWatchCoroutine != null)
+        {
+            StopCoroutine(_trainingDemoPlaybackWatchCoroutine);
+            _trainingDemoPlaybackWatchCoroutine = null;
+        }
+
+        if (midiPlayer != null && _trainingDemoPlaying)
+        {
+            midiPlayer.StopPlayback();
+            if (_trainingDemoPrevKeyMode == KeyMode.Physical && piano != null)
+            {
+                piano.SuppressPhysicalPressForSeconds(piano.SuppressPhysicalPressSecondsAfterForShow);
+            }
+            midiPlayer.KeyMode = _trainingDemoPrevKeyMode;
+        }
+
+        _trainingDemoPlaying = false;
+    }
+
+    private IEnumerator TrainingDemoWatchPlayback(int token)
+    {
+        while (token == _trainingDemoToken && midiPlayer != null && midiPlayer.IsPlaying)
+        {
+            yield return null;
+        }
+
+        if (token != _trainingDemoToken) yield break;
+
+        if (midiPlayer != null)
+        {
+            if (_trainingDemoPrevKeyMode == KeyMode.Physical && piano != null)
+            {
+                piano.SuppressPhysicalPressForSeconds(piano.SuppressPhysicalPressSecondsAfterForShow);
+            }
+            midiPlayer.KeyMode = _trainingDemoPrevKeyMode;
+        }
+
+        _trainingDemoPlaying = false;
+        _trainingDemoPlaybackWatchCoroutine = null;
     }
 
     private IEnumerator AccuracyPatternDemoAfterDelay(int token, float delaySeconds)
@@ -91,18 +165,25 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         if (token != _accuracyDemoToken) yield break;
         if (piano == null || piano.PianoNotes == null || piano.PianoNotes.Count == 0) yield break;
 
-        var prevKeyMode = midiPlayer != null ? midiPlayer.KeyMode : KeyMode.Physical;
-        if (midiPlayer != null) midiPlayer.KeyMode = KeyMode.ForShow;
+        if (midiPlayer != null)
+        {
+            _accuracyDemoPrevKeyMode = midiPlayer.KeyMode;
+            midiPlayer.KeyMode = KeyMode.ForShow;
+        }
+        _accuracyDemoPlaying = true;
 
         float secondsPerBeat = 60f / Mathf.Max(0.01f, bpm);
         float next = Time.realtimeSinceStartup;
 
-        // デモは 1 セット目のみ（pattern 1回）
-        for (int i = 0; i < accuracyPattern.Length; i++)
+        // デモもタスク同様に「セット数」を反映させる（既定: 3セット）
+        int plannedTrials = GetAccuracyPlannedTrials();
+        plannedTrials = Mathf.Max(plannedTrials, accuracyPattern != null ? accuracyPattern.Length : 0);
+
+        for (int trial = 1; trial <= plannedTrials; trial++)
         {
             if (token != _accuracyDemoToken) break;
 
-            string canonical = accuracyPattern[i] ?? "";
+            string canonical = GetAccuracyCanonicalTarget(trial);
             string systemName = ToSystemNoteName(canonical);
 
             if (piano.PianoNotes.TryGetValue(systemName, out var key) && key != null)
@@ -121,7 +202,8 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             }
         }
 
-        if (midiPlayer != null) midiPlayer.KeyMode = prevKeyMode;
+        if (midiPlayer != null) midiPlayer.KeyMode = _accuracyDemoPrevKeyMode;
+        _accuracyDemoPlaying = false;
         _accuracyDemoCoroutine = null;
     }
 
@@ -133,6 +215,15 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             StopCoroutine(_accuracyDemoCoroutine);
             _accuracyDemoCoroutine = null;
         }
+
+        if (midiPlayer != null && _accuracyDemoPlaying)
+        {
+            if (_accuracyDemoPrevKeyMode == KeyMode.Physical && piano != null)
+            {
+                piano.SuppressPhysicalPressForSeconds(piano.SuppressPhysicalPressSecondsAfterForShow);
+            }
+            midiPlayer.KeyMode = _accuracyDemoPrevKeyMode;
+        }
+        _accuracyDemoPlaying = false;
     }
 }
-

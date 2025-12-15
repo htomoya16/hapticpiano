@@ -21,6 +21,12 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         _activeTask = _session.BeginTask(ToConditionString(condition), "twinkle");
         _mode = Mode.Twinkle;
 
+        if (_activeTask != null)
+        {
+            EmitLogMessage($"task start: twinkle / {ToConditionString(condition)}");
+            EmitLogMessage($"events: {_activeTask.EventsPath}");
+        }
+
         _trialIndex = 0;
         _twinkleNoteIndex = 0;
         _twinkleTimerTicks = 0f;
@@ -54,7 +60,7 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
 
         if (_twinkleNoteIndex >= _twinkleNotes.Length)
         {
-            StopCurrentTask();
+            RequestEndAfterDelay(advanceSchedule: true);
             return;
         }
 
@@ -67,13 +73,18 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             _twinkleNoteIndex++;
 
             _trialIndex++;
-            HighlightTarget(note.Note, fadeOutSeconds: 0f);
+            // きらきら星タスクは「ガイド提示なし（光らせない）」運用：自由に演奏してもらう。
+            // ただしログ用に target(trial) は記録する（分析時に参照できるようにする）。
 
             if (logTwinkleTargets)
             {
                 _activeTask.LogTrial(_trialIndex, ToCanonicalNoteName(note.Note));
             }
         }
+
+        if (_twinkleNoteIndex >= _twinkleNotes.Length)
+        {
+            RequestEndAfterDelay(advanceSchedule: true);
+        }
     }
 }
-

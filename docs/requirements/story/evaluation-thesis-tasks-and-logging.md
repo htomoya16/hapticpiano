@@ -23,8 +23,8 @@
 ## 受け入れ条件
 
 ### 1. 事前練習（デモ）
-1. 事前練習として、`MidiPlayer` により **デモ再生を1回**流せること。
-2. **きらきら星の本番タスクは練習に含めない**運用であることが docs 上で明確であること。
+1. デモとして、`MidiPlayer` により **きらきら星のデモ再生**を開始/中止できること。
+2. デモとして、**打鍵精度パターンのデモ**を開始/中止できること（3セット分）。
 
 ### 2. Accuracy（主要評価）
 1. 60 BPM のメトロノームに同期して 1拍=1trial で進行すること。
@@ -36,8 +36,9 @@
 4. タスク中の押下イベントが記録されること（押下時刻＋押下キー）。
 
 ### 3. Twinkle（副次評価）
-1. きらきら星（`Assets/StreamingAssets/MIDI/twinkle_twinkle_60bpm_12bars.mid`）に基づいて、ターゲット鍵が点灯すること。
-2. 余裕があれば、ターゲット提示（trial）と押下イベントがログに記録できること（トグル等で ON/OFF 可能）。
+1. きらきら星（`Assets/StreamingAssets/MIDI/twinkle_twinkle_60bpm_12bars.mid`）に基づくタスクを実行できること。
+2. タスク中、ターゲット鍵のガイド提示（点灯）は行わないこと（自由に演奏してもらう運用）。
+3. ターゲット提示（trial）と押下イベントがログに記録できること（トグルで ON/OFF 可能）。
 
 ### 4. ログ（CSV）
 1. ログの保存先が `Application.persistentDataPath` 配下であること：
@@ -50,18 +51,14 @@
    - `task_summary.csv`
    - 何のため：タスクの開始/終了、条件、タスク種別の一覧（全体のインデックス）
    - `start_time,end_time,participant_id,condition,task`
-4. trial（正解ターゲット側）のログが 1 行/trial で出力されること：
-   - `{task}_{condition}_{task_instance_id}_trials.csv`
-   - 何のため：ガイドとして提示した「正解ターゲット」の時系列
-   - `trial_index,beat_time,target_key`
-5. 押下（実入力側）のログが 1 行/押下で出力されること：
-   - `{task}_{condition}_{task_instance_id}_presses.csv`
-   - 何のため：実際に押されたキーの時系列
-   - `press_time,pressed_key`
-6. 時刻が UTC（ISO 8601）で保存されること。
+4. イベント（trial/press）ログが 1 ファイルで出力されること：
+   - `{task}_{condition}_{task_instance_id}_events.csv`
+   - 何のため：正解ターゲット提示と実押下を時系列でまとめる
+   - `event_time,event_type,trial_index,beat_time,target_key,pressed_key`
+5. 時刻が UTC（ISO 8601）で保存されること。
 
 補足（意味）
-- `*_trials.csv` は「その時点で提示した正解ターゲット」側、`*_presses.csv` は「実際の押下」側。
+- `event_type=trial` は「その時点で提示した正解ターゲット」側、`event_type=press` は「実際の押下」側。
 - Twinkle の `beat_time` は「ノートを処理してガイド提示したタイミング」で、厳密な音声再生時刻ではない。
 
 ## 実装参照（現状）
@@ -71,11 +68,12 @@
 ## 運用メモ（A/Bグループの順序）
 - Aグループ：
   - Accuracy：`touch_off → touch_on`
-  - Twinkle：`touch_on → touch_off`
+  - Twinkle：`touch_off → touch_on`
 - Bグループ（逆順）：
   - Accuracy：`touch_on → touch_off`
-  - Twinkle：`touch_off → touch_on`
+  - Twinkle：`touch_on → touch_off`
 
 ## 運用メモ（タスク間インターバルとVR表示）
 - 各タスク開始前（**初回含む**）に **20秒** のインターバルを設ける。
-- インターバル中は、VR 内に「次のタスク説明」と「開始までのカウントダウン」を表示する。
+- インターバル中は、VR 内に「次のタスク説明」「休憩時間（残り秒）」「補足説明（文章＋図）」を表示する。
+- インターバル終了後、開始直前に **5秒カウントダウン** を行う（表示は `5,4,3,2,1` の数字のみ）。

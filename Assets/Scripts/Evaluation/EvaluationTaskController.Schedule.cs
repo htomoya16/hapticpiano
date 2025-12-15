@@ -48,16 +48,23 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         string taskJa = task == Mode.Accuracy ? "打鍵精度" : task == Mode.Twinkle ? "きらきら星" : "-";
         string hapticsJa = cond == EvaluationCondition.TouchOn ? "あり" : "なし";
 
-        int w = Mathf.Clamp(nextTaskTableTaskColumnWidth, 2, 24);
+        // `PadRight` は文字数で揃えるため、表示幅（プロポーショナル）だと ":" がズレる。
+        // 既定は `<mspace>` で等幅化してコロン位置を縦に揃える。
+        string labelTask = "タスク";
+        string labelHaptics = "触覚";
+        int minLabelWidth = Mathf.Max(labelTask.Length, labelHaptics.Length);
+        int w = Mathf.Clamp(nextTaskTableTaskColumnWidth, minLabelWidth, minLabelWidth + 6);
+
         string title = titlePrefix ?? "";
-        string header = $"{("タスク").PadRight(w)}: {taskJa}";
-        string row = $"{("触覚").PadRight(w)}: {hapticsJa}";
+        string header = $"{labelTask.PadRight(w)}: {taskJa}";
+        string row = $"{labelHaptics.PadRight(w)}: {hapticsJa}";
         string sep = new string('-', Mathf.Max(header.Length, row.Length));
 
         var sb = new StringBuilder();
+        // タイトル→区切り線→内容（区切り線を2行目にする）
         if (!string.IsNullOrEmpty(title)) sb.AppendLine(title);
-        sb.AppendLine(header);
         sb.AppendLine(sep);
+        sb.AppendLine(header);
         sb.Append(row);
 
         string s = sb.ToString();
@@ -70,6 +77,7 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         if (!useGroupSchedule) return false;
         if (IsTaskRunning) return false;
         if (isCountingDown) return false;
+        if (isTaskIntroActive) return false;
         if (requireExplicitGroupSelection && !hasExplicitGroupSelection) return false;
 
         var steps = GetScheduleSteps(group);
@@ -97,8 +105,8 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             {
                 new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOff },
                 new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOn },
-                new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOn },
                 new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOff },
+                new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOn },
             };
         }
 
@@ -106,8 +114,8 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         {
             new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOn },
             new ScheduleStep { task = Mode.Accuracy, condition = EvaluationCondition.TouchOff },
-            new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOff },
             new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOn },
+            new ScheduleStep { task = Mode.Twinkle,  condition = EvaluationCondition.TouchOff },
         };
     }
 
@@ -193,4 +201,3 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         else if (step.task == Mode.Twinkle) StartTwinkleTask();
     }
 }
-

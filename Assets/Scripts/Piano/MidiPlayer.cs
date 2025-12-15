@@ -39,6 +39,8 @@ public class MidiPlayer : MonoBehaviour
 	[SerializeField, HideInInspector]
 	bool _preset = false;
 
+	public bool IsPlaying => _midi != null;
+
 void Start ()
 {
 	// 曲開始時にUIへ曲情報を通知

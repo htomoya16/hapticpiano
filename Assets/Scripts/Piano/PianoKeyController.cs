@@ -30,6 +30,20 @@ public class PianoKeyController : MonoBehaviour
 	[Tooltip("押下状態の解除（0→360補正後の eulerAngles.x）。この値以上に戻ったら次の押下を受け付ける。")]
 	public float PhysicalPressExitAngleX = 359.8f;
 
+	[Tooltip("ForShow（デモ）→Physical 切替直後、押下アニメーションによる誤判定を防ぐため物理押下判定を無視する秒数。")]
+	public float SuppressPhysicalPressSecondsAfterForShow = 0.35f;
+
+	private float _suppressPhysicalPressUntilRealtime;
+
+	public void SuppressPhysicalPressForSeconds(float seconds)
+	{
+		_suppressPhysicalPressUntilRealtime = Mathf.Max(
+			_suppressPhysicalPressUntilRealtime,
+			Time.realtimeSinceStartup + Mathf.Max(0f, seconds));
+	}
+
+	public bool IsPhysicalPressSuppressed => Time.realtimeSinceStartup < _suppressPhysicalPressUntilRealtime;
+
 	[Header("AudioSource Pool")]
 	[Tooltip("連打時に AddComponent<AudioSource>() が走って遅延するのを防ぐため、各鍵盤に事前に用意する AudioSource 数。")]
 	[Min(1)]
@@ -84,7 +98,6 @@ public class PianoKeyController : MonoBehaviour
 	public Dictionary<string, PianoKey> PianoNotes = new Dictionary<string, PianoKey>();
 
 	private readonly string[] _keyIndex = new string[12] { "C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B" };
-	private static readonly System.Text.RegularExpressions.Regex NoteNameRegex = new System.Text.RegularExpressions.Regex(@"^[A-G]#?\d+$");
 
 void Awake ()
 {
@@ -203,14 +216,6 @@ void Awake ()
 			this);
 	}
 }
-
-	// https://stackoverflow.com/a/228060
-	string Reverse(string s)
-	{
-		char[] charArray = s.ToCharArray();
-		Array.Reverse( charArray );
-		return new string( charArray );
-	}
 
 void Update()
 {
