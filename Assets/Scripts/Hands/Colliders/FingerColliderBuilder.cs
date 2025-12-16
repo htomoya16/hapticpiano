@@ -233,7 +233,10 @@ public class FingerColliderBuilder : MonoBehaviour
 
         float r = otherScale > 1e-4f ? worldRadius / otherScale : worldRadius;
         col.radius = r;
-        col.height = (axisScale > 1e-4f ? worldDist / axisScale : worldDist) + r * 2f;
+        // height は「両端の半球込み」の全長なので、+2r すると骨間より長くはみ出す。
+        // 骨（jointsTipToRoot の各 Transform）の位置がカプセルの端になるよう、全長を骨間距離に合わせる。
+        float h = (axisScale > 1e-4f ? worldDist / axisScale : worldDist);
+        col.height = Mathf.Max(h, r * 2f);
         col.center = Vector3.zero;
     }
 

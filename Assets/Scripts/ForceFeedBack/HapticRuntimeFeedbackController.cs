@@ -12,6 +12,12 @@ public sealed class HapticRuntimeFeedbackController : MonoBehaviour
     private const int FingerCount = 5;
     private const int DefaultServoMax = 1000;
 
+    public enum GapMode
+    {
+        FixedUnits = 0,
+        RatioOfRange = 1,
+    }
+
     [Header("References")]
     public HandCurlTracker curlTracker;
     public HapticCalibrationState calibrationState;
@@ -24,6 +30,9 @@ public sealed class HapticRuntimeFeedbackController : MonoBehaviour
 
     [Tooltip("設定画面オープナー（設定パネルが開いている間は上書きしない）。")]
     public SettingsOverlayOpener settingsOverlay;
+
+    [Tooltip("true のとき、設定パネルが開いている間はサーボ目標値の更新を停止する（既定: 停止しない）。")]
+    public bool pauseWhileSettingsOpen = false;
 
     [Header("Hand")]
     public Handedness handedness = Handedness.Right;
@@ -39,12 +48,25 @@ public sealed class HapticRuntimeFeedbackController : MonoBehaviour
     [Tooltip("サーボ最大値（通常 1000）")]
     public int servoMax = DefaultServoMax;
 
-    [Header("Gap (servo units, toward released)")]
+    [Header("Gap")]
+    [Tooltip("ギャップの決め方。\n- FixedUnits: 従来どおり固定値（サーボ単位）\n- RatioOfRange: (servoMax - released) に対する割合（指ごとの差が出にくい）")]
+    public GapMode gapMode = GapMode.RatioOfRange;
+
+    [Header("Gap (FixedUnits, toward released)")]
     [Tooltip("通常時: 指に追従して計算した目標から、released 方向へこの値だけ離す（一定ギャップ）。\n0 でギャップなし。")]
     public int airGapUnits = 300;
 
     [Tooltip("鍵盤接触時: 指側へ寄せるため、通常より小さいギャップにする（0 推奨）。")]
     public int pianoGapUnits = 5;
+
+    [Header("Gap (RatioOfRange, toward released)")]
+    [Range(0f, 1f)]
+    [Tooltip("通常時: gap = (servoMax - released) * ratio")]
+    public float airGapRatio01 = 0.30f;
+
+    [Range(0f, 1f)]
+    [Tooltip("鍵盤接触時: gap = (servoMax - released) * ratio（指側へ寄せるなら小さめ/0 推奨）")]
+    public float pianoGapRatio01 = 0.005f;
 
     [Header("Bottom")]
     [Tooltip("底面ロック中はその指の値を保持する")]
@@ -83,7 +105,7 @@ public sealed class HapticRuntimeFeedbackController : MonoBehaviour
         EnsureArrays();
 
         if (curlTracker == null || calibrationState == null || serialSender == null) return;
-        if (IsSettingsOpen()) return;
+        if (pauseWhileSettingsOpen && IsSettingsOpen()) return;
 
         if (contactRegistry == null)
         {
@@ -122,8 +144,19 @@ public sealed class HapticRuntimeFeedbackController : MonoBehaviour
             int desired = Mathf.RoundToInt(Mathf.Lerp(released, max, t));
             desired = Clamp1000(desired);
 
-            int gap = touching ? pianoGapUnits : airGapUnits;
-            gap = Mathf.Max(0, gap);
+            int gap;
+            if (gapMode == GapMode.RatioOfRange)
+            {
+                float ratio = touching ? pianoGapRatio01 : airGapRatio01;
+                ratio = Mathf.Clamp01(ratio);
+                gap = Mathf.RoundToInt((max - released) * ratio);
+            }
+            else
+            {
+                gap = touching ? pianoGapUnits : airGapUnits;
+            }
+
+            gap = Mathf.Clamp(gap, 0, Mathf.Max(0, max - released));
             desired = Mathf.Max(released, desired - gap);
             desired = Clamp1000(desired);
 

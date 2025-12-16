@@ -24,6 +24,8 @@
 - [feature/haptics-serial-calibration.md](feature/haptics-serial-calibration.md)
 - [feature/haptics-runtime-feedback.md](feature/haptics-runtime-feedback.md)
 - [feature/piano-haptics-integration.md](feature/piano-haptics-integration.md)
+- [feature/evaluation-thesis-experiment.md](feature/evaluation-thesis-experiment.md)
+- [feature/piano-key-solfege-labels.md](feature/piano-key-solfege-labels.md)
 
 今後 piano / haptics / evaluation などの機能が増えた場合も、この階層に追加する。
 
@@ -42,6 +44,8 @@
 - [story/hand-curl-filtering-noise-reduction.md](story/hand-curl-filtering-noise-reduction.md)
 - [story/haptics-serial-calibration.md](story/haptics-serial-calibration.md)
 - [story/haptics-runtime-feedback-piano-mode.md](story/haptics-runtime-feedback-piano-mode.md)
+- [story/evaluation-thesis-tasks-and-logging.md](story/evaluation-thesis-tasks-and-logging.md)
+- [story/piano-key-solfege-labels.md](story/piano-key-solfege-labels.md)
 
 story は「今回のタスクで何をもって完了とするか」を定義する。
 
