@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -7,6 +8,16 @@ public class PianoKey : MonoBehaviour
 	public List<AudioSource> AudioSources { get; set; }
 	public AudioSource CurrentAudioSource { get; set; }
 	public PianoKeyController PianoKeyController { get; set; }
+
+	/// <summary>
+	/// PianoKeyController から割り当てられるノート名（例: C4, F#5）。
+	/// </summary>
+	public string NoteName { get; set; }
+
+	/// <summary>
+	/// 物理モードで鍵盤が押下判定された瞬間に発火する。
+	/// </summary>
+	public event Action<string> Pressed;
 
 	public bool Sustain { get; set; }
 	public float SustainSeconds { get; set; }
@@ -21,6 +32,12 @@ public class PianoKey : MonoBehaviour
 	private Color _originalColour;
 	private float _Timer;
 	private float _keyAngle = 360f;
+	private bool _guideHighlight;
+	private Color _guideHighlightColour;
+	private bool _guideHighlightFading;
+	private float _guideFadeStartRealtime;
+	private float _guideFadeDurationSeconds;
+	private Color _guideFadeFromColour;
 
 	private Vector3 _position;
 	private Vector3 _rotation;
@@ -55,6 +72,42 @@ void Awake()
 
 		Material = GetComponent<MeshRenderer>().material;
 		_originalColour = Material.color;
+		_guideHighlightColour = new Color(1f, 0.92f, 0.2f, 1f);
+	}
+
+	/// <summary>
+	/// 連打時に AddComponent<AudioSource>() が走って一瞬詰まるのを防ぐため、AudioSource を事前に確保する。
+	/// </summary>
+	public void EnsureAudioSourcePool(int minCount)
+	{
+		minCount = Mathf.Max(1, minCount);
+
+		if (AudioSources == null)
+		{
+			AudioSources = new List<AudioSource>();
+		}
+
+		if (AudioSources.Count == 0)
+		{
+			var src = GetComponent<AudioSource>();
+			if (src != null)
+			{
+				AudioSources.Add(src);
+				CurrentAudioSource = src;
+			}
+		}
+
+		if (CurrentAudioSource == null && AudioSources.Count > 0)
+		{
+			CurrentAudioSource = AudioSources[0];
+		}
+
+		if (CurrentAudioSource == null) return;
+
+		while (AudioSources.Count < minCount)
+		{
+			AudioSources.Add(CloneAudioSource());
+		}
 	}
 
 	// Update is called once per frame
@@ -67,13 +120,32 @@ void Update()
 		KeyPlayMechanics(); // MIDI再生時の押下アニメーション
 	}
 
+	UpdateGuideHighlightFade();
+
 	if (PianoKeyController.KeyMode == KeyMode.Physical)
 	{
-		if (transform.eulerAngles.x > 350 && transform.eulerAngles.x < 359.5f && !_played)
+		float x = transform.eulerAngles.x;
+		if (x < 180f) x += 360f; // 0..180 を 360..540 に補正（キーは 352..360 付近で動く前提）
+
+		float enter = PianoKeyController != null ? PianoKeyController.PhysicalPressEnterAngleX : 359.5f;
+		float exit = PianoKeyController != null ? PianoKeyController.PhysicalPressExitAngleX : 359.8f;
+		if (exit < enter) exit = enter;
+
+		// デモ（ForShow）から戻した直後、押下アニメーションが残っていると「物理押下」と誤判定して音が二重に鳴り得る。
+		// 抑制中はイベント発火を止めつつ、_played 状態だけ同期して「抑制解除後の誤発火」も防ぐ。
+		if (PianoKeyController != null && PianoKeyController.IsPhysicalPressSuppressed)
+		{
+			if (x <= enter) _played = true;
+			else if (x >= exit) _played = false;
+			return;
+		}
+
+		if (x <= enter && !_played)
 			{
 				if (CurrentAudioSource.clip)
 					StartCoroutine(PlayPressedAudio());
 
+				Pressed?.Invoke(NoteName);
 				_played = true;
 
 				if (_toFade.Count > 0)
@@ -81,7 +153,7 @@ void Update()
 					FadeList();
 				}
 			}
-			else if (transform.eulerAngles.x > 359.9 || transform.eulerAngles.x < 350)
+			else if (x >= exit && _played)
 			{
 				FadeAll();
 				
@@ -133,7 +205,7 @@ void KeyPlayMechanics()
 		// スプリング/重力を一時無効化し、トルクで押し込み再現
 		_springJoint.useSpring = false;
 		_constantForce.enabled = false;
-		
+	
 		if (transform.eulerAngles.x < 1 || transform.eulerAngles.x > 359.5f)
 		{
 				_rigidbody.AddTorque(-Vector3.right * _velocity / 1024f);
@@ -165,7 +237,7 @@ void KeyPlayMechanics()
 	}
 	else
 	{
-		Material.color = _originalColour; // 色を元に戻し、物理を再有効化
+		ApplyGuideVisual(); // 色を元に戻し（ガイドがあれば維持）、物理を再有効化
 		_constantForce.enabled = true;
 		_springJoint.useSpring = true;
 		_play = false;
@@ -330,5 +402,65 @@ void PlayVirtualAudio()
 		newAudioSource.outputAudioMixerGroup = CurrentAudioSource.outputAudioMixerGroup;
 
 		return newAudioSource;
+	}
+
+	public void SetGuideHighlight(bool on, Color colour)
+	{
+		_guideHighlightFading = false;
+		_guideHighlight = on;
+		_guideHighlightColour = colour;
+		ApplyGuideVisual();
+	}
+
+	/// <summary>
+	/// ガイド点灯を一定秒でフェードアウトさせる（Accuracy タスク向け）。
+	/// </summary>
+	public void StartGuideHighlightFade(Color colour, float fadeSeconds)
+	{
+		_guideHighlight = true;
+		_guideHighlightFading = true;
+		_guideFadeFromColour = colour;
+		_guideHighlightColour = colour;
+		_guideFadeStartRealtime = Time.realtimeSinceStartup;
+		_guideFadeDurationSeconds = Mathf.Max(0.01f, fadeSeconds);
+		ApplyGuideVisual();
+	}
+
+	public void ClearGuideHighlight()
+	{
+		_guideHighlight = false;
+		_guideHighlightFading = false;
+		ApplyGuideVisual();
+	}
+
+	private void UpdateGuideHighlightFade()
+	{
+		if (!_guideHighlightFading) return;
+		if (!_guideHighlight) { _guideHighlightFading = false; return; }
+		if (Material == null) return;
+
+		// MIDIのチャンネル色表示中は鍵盤側の色制御を優先
+		if (_play && PianoKeyController != null && PianoKeyController.ShowMIDIChannelColours)
+		{
+			return;
+		}
+
+		float t = (Time.realtimeSinceStartup - _guideFadeStartRealtime) / Mathf.Max(0.01f, _guideFadeDurationSeconds);
+		if (t >= 1f)
+		{
+			_guideHighlight = false;
+			_guideHighlightFading = false;
+			ApplyGuideVisual();
+			return;
+		}
+
+		_guideHighlightColour = Color.Lerp(_guideFadeFromColour, _originalColour, Mathf.Clamp01(t));
+		ApplyGuideVisual();
+	}
+
+	private void ApplyGuideVisual()
+	{
+		if (Material == null) return;
+		Material.color = _guideHighlight ? _guideHighlightColour : _originalColour;
 	}
 }

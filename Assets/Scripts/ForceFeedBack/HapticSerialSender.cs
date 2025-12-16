@@ -33,7 +33,7 @@ public class HapticSerialSender : MonoBehaviour
 
     [Header("Rate Limit")]
     [Tooltip("送信レート上限（Hz）。0以下で無制限。目安: 30")]
-    public float maxSendHz = 25f;
+    public float maxSendHz = 30f;
 
     [Tooltip("前回送信値から変化がない（または小さい）場合は送信しない")]
     public bool sendOnlyWhenChanged = true;
