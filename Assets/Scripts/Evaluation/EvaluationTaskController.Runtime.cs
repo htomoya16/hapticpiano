@@ -3,6 +3,16 @@ using UnityEngine;
 
 public sealed partial class EvaluationTaskController : MonoBehaviour
 {
+    [Header("Haptics (Rest / TouchOff)")]
+    [Tooltip("休憩（カウントダウン）中に『次のタスクが触覚なし』の場合、送信を止める（サーボを動かさない）。")]
+    public bool disableHapticsDuringRestWhenNextIsTouchOff = true;
+
+    [Tooltip("触覚なしへ切り替える直前に、0 または released 値を 1 回送って手を自由にする。")]
+    public bool relaxBeforeDisablingHaptics = true;
+
+    [Tooltip("relax 時に released 値（キャリブ結果）が使えるなら優先する。未キャリブの場合は 0 を送る。")]
+    public bool relaxUseReleasedValuesIfAvailable = true;
+
     private void ClearPendingTaskEnd()
     {
         _isTaskEndPending = false;
@@ -189,6 +199,26 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     {
         if (hapticSenders == null || hapticSenders.Length == 0) return;
 
+        bool nextEnable = (c == EvaluationCondition.TouchOn);
+        bool willDisableAny = false;
+        if (!nextEnable && relaxBeforeDisablingHaptics)
+        {
+            for (int i = 0; i < hapticSenders.Length; i++)
+            {
+                if (hapticSenders[i] == null) continue;
+                if (hapticSenders[i].enableSend)
+                {
+                    willDisableAny = true;
+                    break;
+                }
+            }
+        }
+
+        if (willDisableAny)
+        {
+            TryRelaxAllSendersOnce();
+        }
+
         if (_prevHapticEnableSend == null || _prevHapticEnableSend.Length != hapticSenders.Length)
         {
             _prevHapticEnableSend = new bool[hapticSenders.Length];
@@ -198,10 +228,51 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         {
             if (hapticSenders[i] == null) continue;
             _prevHapticEnableSend[i] = hapticSenders[i].enableSend;
-            hapticSenders[i].enableSend = (c == EvaluationCondition.TouchOn);
+            hapticSenders[i].enableSend = nextEnable;
         }
 
         _hapticsOverridden = true;
+    }
+
+    private void TryRelaxAllSendersOnce()
+    {
+        if (hapticSenders == null || hapticSenders.Length == 0) return;
+
+        const int fingerCount = 5;
+        for (int i = 0; i < hapticSenders.Length; i++)
+        {
+            var s = hapticSenders[i];
+            if (s == null) continue;
+
+            int[] relax = null;
+            if (relaxUseReleasedValuesIfAvailable && s.calibrationState != null)
+            {
+                relax = s.calibrationState.GetReleasedValuesCopyOrNull();
+            }
+
+            if (relax == null || relax.Length != fingerCount)
+            {
+                relax = new int[fingerCount]; // 0
+            }
+
+            // currentFingerTargets にも反映して、停止後も「緩み状態」を保持する
+            if (s.currentFingerTargets == null || s.currentFingerTargets.Length != fingerCount)
+            {
+                s.currentFingerTargets = new int[fingerCount];
+            }
+
+            for (int f = 0; f < fingerCount; f++)
+            {
+                int v = relax[f];
+                if (v < 0) v = 0;
+                if (v > 1000) v = 1000;
+                relax[f] = v;
+                s.currentFingerTargets[f] = v;
+            }
+
+            // enableSend に関係なく 1 回だけ送る（ただしポートが開いていないと失敗する）
+            s.TrySendNow(relax, bypassGuards: true);
+        }
     }
 
     private void RestoreHapticsIfNeeded()

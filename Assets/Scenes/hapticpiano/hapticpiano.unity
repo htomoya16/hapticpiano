@@ -1700,12 +1700,16 @@ MonoBehaviour:
   contactRegistry: {fileID: 0}
   settingsPanelRoot: {fileID: 1497962618}
   settingsOverlay: {fileID: 1572178682}
+  pauseWhileSettingsOpen: 0
   handedness: 0
   invertCurl: 1
   tStrength01: 1
   servoMax: 1000
+  gapMode: 1
   airGapUnits: 300
   pianoGapUnits: 45
+  airGapRatio01: 0.45
+  pianoGapRatio01: 0.01
   freezeWhileBottomLocked: 1
   deadbandUnits: 1
   currentTargets: 0000000000000000000000000000000000000000
@@ -2562,6 +2566,9 @@ MonoBehaviour:
   taskEndDelaySeconds: 3
   isTaskIntroActive: 0
   taskIntroRemainingSeconds: 0
+  disableHapticsDuringRestWhenNextIsTouchOff: 1
+  relaxBeforeDisablingHaptics: 1
+  relaxUseReleasedValuesIfAvailable: 1
 --- !u!4 &399183975
 Transform:
   m_ObjectHideFlags: 0
@@ -6377,12 +6384,16 @@ MonoBehaviour:
   contactRegistry: {fileID: 0}
   settingsPanelRoot: {fileID: 1497962618}
   settingsOverlay: {fileID: 1572178682}
+  pauseWhileSettingsOpen: 0
   handedness: 1
   invertCurl: 1
   tStrength01: 1
   servoMax: 1000
+  gapMode: 1
   airGapUnits: 300
   pianoGapUnits: 45
+  airGapRatio01: 0.45
+  pianoGapRatio01: 0.01
   freezeWhileBottomLocked: 1
   deadbandUnits: 1
   currentTargets: 0000000000000000000000000000000000000000
@@ -6522,6 +6533,97 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1052553047}
   m_CullTransparentMesh: 1
+--- !u!1 &1055727282
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1055727284}
+  - component: {fileID: 1055727283}
+  m_Layer: 0
+  m_Name: PianoFingerContentRegistry
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1055727283
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1055727282}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dbd1a7c5dbb4d29a5d1d3c5c9d8d3f1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  requiredSegmentIndex: 0
+  bottomEnterAngleX: 352.5
+  bottomExitAngleX: 354
+  logChanges: 1
+  touchReleaseGraceSeconds: 0.08
+  rightHand:
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  leftHand:
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+  - isTouching: 0
+    isBottomLocked: 0
+    primaryKey: {fileID: 0}
+    primaryKeyAngleX: 0
+--- !u!4 &1055727284
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1055727282}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.8883693, y: 0.46232754, z: 1.5265994}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1059033869
 GameObject:
   m_ObjectHideFlags: 0
@@ -18218,16 +18320,20 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 204354137830494628, guid: 38514254f0a1aa04383fb815f5bcf432, type: 2}
     - target: {fileID: 5679838331531579497, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: releasedValueOffset
+      value: -100
+      objectReference: {fileID: 0}
+    - target: {fileID: 5679838331531579497, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: stepIntervalSeconds
       value: 0.05
       objectReference: {fileID: 0}
     - target: {fileID: 5679838331531579497, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: allowedBaselineDeviation
-      value: 15
+      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 5679838331531579497, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: requiredConsecutiveOutOfRange
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6043003177411553604, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: m_LocalScale.x
@@ -18927,12 +19033,16 @@ PrefabInstance:
       value: 700
       objectReference: {fileID: 0}
     - target: {fileID: 5846138339072508012, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
+      propertyPath: releasedValueOffset
+      value: -100
+      objectReference: {fileID: 0}
+    - target: {fileID: 5846138339072508012, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: allowedBaselineDeviation
-      value: 15
+      value: 100
       objectReference: {fileID: 0}
     - target: {fileID: 5846138339072508012, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: requiredConsecutiveOutOfRange
-      value: 1
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 6727141065411101357, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: cameraTransform
@@ -23261,6 +23371,7 @@ SceneRoots:
   - {fileID: 1656088025}
   - {fileID: 533664311}
   - {fileID: 1391860851}
+  - {fileID: 1055727284}
   - {fileID: 7788305021743738881}
   - {fileID: 1686136607}
   - {fileID: 931182694}

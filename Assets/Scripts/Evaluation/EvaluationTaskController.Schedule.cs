@@ -101,6 +101,13 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         _hasPendingStep = true;
         condition = _pendingStep.condition;
 
+        // 休憩（カウントダウン）中の条件に合わせて、次が触覚なしなら送信を止める。
+        // StopCurrentTaskInternal で RestoreHapticsIfNeeded() が呼ばれているため、ここでは上書きしても復元可能。
+        if (disableHapticsDuringRestWhenNextIsTouchOff && condition == EvaluationCondition.TouchOff)
+        {
+            ApplyHapticsForCondition(condition);
+        }
+
         float sec = Mathf.Max(0f, countdownSeconds);
         _countdownEndRealtime = Time.realtimeSinceStartup + sec;
         isCountingDown = true;
