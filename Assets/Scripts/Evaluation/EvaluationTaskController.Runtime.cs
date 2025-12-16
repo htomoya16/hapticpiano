@@ -20,6 +20,25 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
         _taskEndAdvanceSchedule = true;
     }
 
+    private void RequestEndAtRealtime(float endRealtime, bool advanceSchedule)
+    {
+        if (_mode == Mode.None && _activeTask == null) return;
+        if (_isTaskEndPending) return;
+
+        float now = Time.realtimeSinceStartup;
+        float end = Mathf.Max(now, endRealtime);
+        float delay = end - now;
+        if (delay <= 0f)
+        {
+            StopCurrentTaskInternal(advanceSchedule);
+            return;
+        }
+
+        _isTaskEndPending = true;
+        _taskEndAdvanceSchedule = advanceSchedule;
+        _taskEndEndRealtime = end;
+    }
+
     private void RequestEndAfterDelay(bool advanceSchedule)
     {
         if (_mode == Mode.None && _activeTask == null) return;
@@ -313,7 +332,6 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
     private void OnPianoKeyPressed(string systemNoteName)
     {
         if (_activeTask == null) return;
-        if (_isTaskEndPending) return;
         _activeTask.LogPress(ToCanonicalNoteName(systemNoteName ?? ""));
     }
 

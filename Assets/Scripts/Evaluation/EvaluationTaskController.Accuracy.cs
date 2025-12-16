@@ -48,22 +48,9 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
             return;
         }
 
-        if (_accuracyPlannedTrials > 0 && _trialIndex >= _accuracyPlannedTrials)
-        {
-            RequestEndAfterDelay(advanceSchedule: true);
-            return;
-        }
-
-        float elapsed = Time.realtimeSinceStartup - _taskStartRealtime;
-        if (elapsed >= Mathf.Max(0.01f, accuracyDurationSeconds))
-        {
-            RequestEndAfterDelay(advanceSchedule: true);
-            return;
-        }
-
         float secondsPerBeat = 60f / Mathf.Max(0.01f, bpm);
         float now = Time.realtimeSinceStartup;
-        while (now >= _nextBeatRealtime)
+        while (now >= _nextBeatRealtime && (_accuracyPlannedTrials <= 0 || _trialIndex < _accuracyPlannedTrials))
         {
             float beatStartRealtime = _nextBeatRealtime;
             _nextBeatRealtime += secondsPerBeat;
@@ -72,7 +59,17 @@ public sealed partial class EvaluationTaskController : MonoBehaviour
 
         if (_accuracyPlannedTrials > 0 && _trialIndex >= _accuracyPlannedTrials)
         {
+            // 「最後の拍が終わってから taskEndDelaySeconds 秒後」に終了させたいので、
+            // 末尾拍の終了時刻（= 次の拍の開始予定時刻）を基準に終了時刻を予約する。
+            RequestEndAtRealtime(_nextBeatRealtime + Mathf.Max(0f, taskEndDelaySeconds), advanceSchedule: true);
+            return;
+        }
+
+        float elapsed = Time.realtimeSinceStartup - _taskStartRealtime;
+        if (elapsed >= Mathf.Max(0.01f, accuracyDurationSeconds))
+        {
             RequestEndAfterDelay(advanceSchedule: true);
+            return;
         }
     }
 

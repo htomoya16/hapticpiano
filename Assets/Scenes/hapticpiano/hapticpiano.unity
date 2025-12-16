@@ -1709,7 +1709,7 @@ MonoBehaviour:
   airGapUnits: 300
   pianoGapUnits: 45
   airGapRatio01: 0.45
-  pianoGapRatio01: 0.01
+  pianoGapRatio01: 0.09
   freezeWhileBottomLocked: 1
   deadbandUnits: 1
   currentTargets: 0000000000000000000000000000000000000000
@@ -6393,7 +6393,7 @@ MonoBehaviour:
   airGapUnits: 300
   pianoGapUnits: 45
   airGapRatio01: 0.45
-  pianoGapRatio01: 0.01
+  pianoGapRatio01: 0.09
   freezeWhileBottomLocked: 1
   deadbandUnits: 1
   currentTargets: 0000000000000000000000000000000000000000
