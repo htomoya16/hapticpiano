@@ -13,6 +13,10 @@ public static class FitPianoKeyColliders
     // 白鍵後方の欠けを横幅からどれだけ削るか（割合ベース）
     const float cutRatioSingle = 0.35f; // 片側欠け: 幅の35%を削る
     const float cutRatioBoth   = 0.55f; // 両側欠け: 幅の55%を削る（左右27.5%ずつ）
+    // 白鍵の左右を少しだけ削る（隣キーとのコライダー干渉回避）。単位はローカル座標(m)。
+    const float whiteSideTrimMeters = 0.00001f; // 0.8mm/side（必要なら調整）
+    // 白鍵のコライダー高さ倍率（例: 0.5 = 高さ半分）
+    const float whiteHeightRatio = 0.5f;
 
     [MenuItem("Tools/Fit Piano Key Colliders (Prefab)")]
     public static void Fit()
@@ -59,6 +63,15 @@ public static class FitPianoKeyColliders
             float frontZ = Mathf.Max(0.0001f, totalZ * whiteFrontRatio);
             float backZ  = Mathf.Max(0.0001f, totalZ - frontZ);
 
+            // 白鍵の左右を共通で削る（前側/後側どちらのコライダーにも適用）
+            float sideTrim = Mathf.Clamp(whiteSideTrimMeters, 0f, totalX * 0.49f);
+            float baseX = Mathf.Max(0.0001f, totalX - (sideTrim * 2f));
+
+            // 白鍵の高さを縮める（上端は合わせる）
+            float originalY = b.size.y + margin.y;
+            float baseY = Mathf.Max(0.0001f, originalY * Mathf.Clamp01(whiteHeightRatio));
+            float centerY = b.center.y + ((originalY - baseY) * 0.5f);
+
             // 後方ノッチ種類をキー番号から判定（A0始まりで12音階に当てはめ）
             // PianoKey.001 が A0（両側欠け）になるように整数をパース
             string nm = t.name.ToLower();
@@ -82,24 +95,24 @@ public static class FitPianoKeyColliders
                 cutRight = cutLeft = cutBoth = false;
             }
 
-            float backWidth = totalX;
+            float backWidth = baseX;
             float backCenterX = b.center.x;
             if (cutBoth)
             {
-                float remove = Mathf.Clamp01(cutRatioBoth) * totalX;
-                backWidth = Mathf.Max(0.0001f, totalX - remove);
+                float remove = Mathf.Clamp01(cutRatioBoth) * baseX;
+                backWidth = Mathf.Max(0.0001f, baseX - remove);
             }
             else if (cutRight)
             {
-                float remove = Mathf.Clamp01(cutRatioSingle) * totalX;
-                backWidth = Mathf.Max(0.0001f, totalX - remove);
+                float remove = Mathf.Clamp01(cutRatioSingle) * baseX;
+                backWidth = Mathf.Max(0.0001f, baseX - remove);
                 // 右側を削るので、残す部分は左へ寄せる
                 backCenterX -= remove * 0.5f;
             }
             else if (cutLeft)
             {
-                float remove = Mathf.Clamp01(cutRatioSingle) * totalX;
-                backWidth = Mathf.Max(0.0001f, totalX - remove);
+                float remove = Mathf.Clamp01(cutRatioSingle) * baseX;
+                backWidth = Mathf.Max(0.0001f, baseX - remove);
                 // 左側を削るので、残す部分は右へ寄せる
                 backCenterX += remove * 0.5f;
             }
@@ -107,18 +120,18 @@ public static class FitPianoKeyColliders
             // 後方コライダー（ノッチ反映）※先に追加（上下関係を逆に）
             {
                 var c = t.gameObject.AddComponent<BoxCollider>();
-                c.size = new Vector3(backWidth + margin.x, b.size.y + margin.y, backZ + margin.z);
+                c.size = new Vector3(backWidth + margin.x, baseY, backZ + margin.z);
                 c.center = new Vector3(backCenterX,
-                                       b.center.y,
+                                       centerY,
                                        b.center.z + frontDirectionSign * (frontZ * 0.5f));
                 EditorUtility.SetDirty(c);
             }
             // 手前コライダー（フル幅）
             {
                 var c = t.gameObject.AddComponent<BoxCollider>();
-                c.size = new Vector3(totalX + margin.x, b.size.y + margin.y, frontZ + margin.z);
+                c.size = new Vector3(baseX + margin.x, baseY, frontZ + margin.z);
                 c.center = new Vector3(b.center.x,
-                                       b.center.y,
+                                       centerY,
                                        b.center.z + frontDirectionSign * (-backZ * 0.5f));
                 EditorUtility.SetDirty(c);
             }
