@@ -18299,6 +18299,10 @@ PrefabInstance:
       propertyPath: m_SizeDelta.x
       value: 700
       objectReference: {fileID: 0}
+    - target: {fileID: 3296099806024029421, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3814381015753934336, guid: e70cee8f75954184b874f9afbbebf297, type: 3}
       propertyPath: cameraTransform
       value: 
@@ -18932,6 +18936,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1686190267}
     m_Modifications:
+    - target: {fileID: 841301664839044115, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 987898318848378252, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: preset
       value: 
@@ -19048,6 +19056,10 @@ PrefabInstance:
       propertyPath: cameraTransform
       value: 
       objectReference: {fileID: 1686126351}
+    - target: {fileID: 7072165855898218930, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7969691745187066563, guid: a1c9004101c565d4fba899e5f556df92, type: 3}
       propertyPath: m_fontAsset
       value: 
