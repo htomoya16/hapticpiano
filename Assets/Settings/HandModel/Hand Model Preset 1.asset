@@ -10,15 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 0}
-  m_Name: Hand Model Preset
+  m_Name: Hand Model Preset 1
   m_EditorClassIdentifier: Assembly-CSharp::HandModelPreset
-  deadZone: 0.021
-  gain: 1.46
-  smoothingFactor: 0.881
   thumbMaxAngle: 220
   indexMaxAngle: 220
   middleMaxAngle: 220
   ringMaxAngle: 220
   pinkyMaxAngle: 220
-  visualDeadZone: 0
-  visualGamma: 0.5
