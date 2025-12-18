@@ -4,6 +4,17 @@
 - 目的は **論文本文の生成ではなく**、Unityプロジェクト内の事実情報（実装・設定・数値・ログ仕様）を、ファイルパスと行番号付きで整理して残すこと。
 - `docs/requirements/**`（要件）と `Assets/**`（実装・設定）を横断し、後段の執筆作業で参照しやすい形にすることを想定。
 
+## ファイル一覧（このフォルダ内）
+- `README.md`: このフォルダの目的・使い方・構成の説明。
+- `00_index.md`: 入口。各資料の役割、参照範囲、未確認項目の整理。
+- `10_system_overview_facts.md`: システム構成要素（Unity/XR/SteamVR/シリアル等）とデータフローの事実列挙。
+- `11_functional_breakdown.md`: 機能IDごとの入力/処理/出力/関連ファイル/Inspector値/失敗時挙動。
+- `12_implementation_environment.md`: 実装環境（Unity/Packages/SDK/外部依存/設定）を表形式で整理。
+- `13_parameters_and_constants.md`: 定数・閾値・レンジ・AnimationCurve要約など数値情報の一覧。
+- `20_evaluation_design_facts.md`: 評価条件・タスク手順・操作・開始/終了条件（結果は含めない）。
+- `21_logging_and_metrics.md`: ログ仕様（保存先、CSV列定義、指標化に使える生データ）。
+- `90_traceability_map.md`: 論文に書く項目→根拠（ファイルパス:行）の対応表。根拠不在項目も列挙。
+
 ## 収録内容（概要）
 - システム構成の事実（デバイス/ソフト/データフロー）
 - 機能分解（入力→処理→出力、関連ファイル、Inspector設定）
