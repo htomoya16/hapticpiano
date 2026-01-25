@@ -12,7 +12,12 @@ Unity / SteamVR / ESP32 を用いて、XR 空間上のピアノ演奏におけ�
 
 本研究では、グローブ型ハプティックデバイスを用い、指屈曲量および仮想鍵盤の接触状態に基づいてサーボモータによるワイヤ牽引を制御することで、鍵盤押下過程に整合した触覚フィードバックを提示する。
 
-### 動作動画
+## 動作動画
+https://github.com/user-attachments/assets/6de40469-c0de-404c-8dc8-cb77528468a1
+
+https://github.com/user-attachments/assets/59e44d95-e3a9-42d7-a6c3-a8d4ebdb51c1
+
+
 
 
 ## システム概要
