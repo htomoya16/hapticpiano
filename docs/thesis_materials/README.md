@@ -11,6 +11,8 @@
 - `11_functional_breakdown.md`: 機能IDごとの入力/処理/出力/関連ファイル/Inspector値/失敗時挙動。
 - `12_implementation_environment.md`: 実装環境（Unity/Packages/SDK/外部依存/設定）を表形式で整理。
 - `13_parameters_and_constants.md`: 定数・閾値・レンジ・AnimationCurve要約など数値情報の一覧。
+- `14_hand_pose_update_facts.md`: 卒論 3.5.1（手root追従・Toffset・Kフラグ凍結）に関する実装根拠の整理。
+- `15_piano_keypress_facts.md`: 卒論 3.6（鍵盤押下検出、指接触/底面判定）に関する実装根拠の整理。
 - `20_evaluation_design_facts.md`: 評価条件・タスク手順・操作・開始/終了条件（結果は含めない）。
 - `21_logging_and_metrics.md`: ログ仕様（保存先、CSV列定義、指標化に使える生データ）。
 - `90_traceability_map.md`: 論文に書く項目→根拠（ファイルパス:行）の対応表。根拠不在項目も列挙。

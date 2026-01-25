@@ -8,6 +8,11 @@
 | OpenVR導入（package） | `Packages/manifest.json:12` | local tgz 1.2.4 |
 | OpenVR action manifest | `Assets/XR/Settings/OpenVRSettings.asset:21` | `StreamingAssets\\SteamVR\\actions.json` |
 | SteamVR actions定義 | `Assets/StreamingAssets/SteamVR/actions.json` | `/actions/default/in/...` |
+| 手root追従（SteamVR Pose→Transform更新） | `Assets/SteamVR/Input/SteamVR_Behaviour_Pose.cs:123` | `origin` 有無で world/local 更新 |
+| 左右手のPose入力（/actions/default/in/Pose） | `Assets/Prefab/Hands/RightHand.prefab:638` | 左手も同様（`Assets/Prefab/Hands/LeftHand.prefab:836`） |
+| Kフラグ（受信行にK含む）で凍結 | `Assets/Scripts/Hands/Core/HandFreezeOnCalibrate.cs:58` | 「再基準化」ではなく固定（凍結） |
+| 鍵盤押下検出（角度ヒステリシス） | `Assets/Scripts/Piano/PianoKey.cs:143` | `x<=enter`で押下、`x>=exit`で解放 |
+| 指の接触/底面判定（TIPのみ） | `Assets/Scripts/Piano/PianoFingerContactRegistry.cs:77` | `requiredSegmentIndex=0` |
 | シリアル受信/送信方式 | `Assets/Scripts/IO/SerialPortAdapter.cs:28` | `SerialPort` open/read/write |
 | パケット形式（A..E 5ch） | `Assets/Scripts/IO/SerialPacketCodec.cs:15` | Regex定義 |
 | センサ値レンジ（0..4095） | `Assets/Scripts/IO/SerialPacketCodec.cs:11` | `SensorRawMax` |
